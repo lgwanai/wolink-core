@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  wolink-core:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - AI_GATEWAY_DATABASE_TYPE=postgres
+      - AI_GATEWAY_DATABASE_HOST=postgres
+      - AI_GATEWAY_DATABASE_PORT=5432
+      - AI_GATEWAY_DATABASE_USER=postgres
+      - AI_GATEWAY_DATABASE_PASSWORD=password
+      - AI_GATEWAY_DATABASE_DBNAME=ai_gateway
+      - AI_GATEWAY_DATABASE_SSLMODE=disable
+      - AI_GATEWAY_REDIS_HOST=redis
+      - AI_GATEWAY_REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=ai_gateway
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

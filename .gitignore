@@ -1,0 +1,51 @@
+# 编译后的可执行文件
+wolink-core
+
+# 配置文件（包含敏感信息）
+configs/config.yaml
+
+# 模型配置文件（包含API密钥）
+configs/models/claude-3.yaml
+configs/models/deepseek-v3.yaml
+configs/models/gpt-4.yaml
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+
+# IDE 配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 操作系统生成的文件
+.DS_Store
+Thumbs.db
+
+# 依赖和构建文件
+vendor/
+dist/
+build/
+
+# 环境变量文件
+.env
+.env.local
+.env.production
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 备份文件
+*.bak
+*.backup
+
+# 测试覆盖率报告
+coverage.out
+coverage.html

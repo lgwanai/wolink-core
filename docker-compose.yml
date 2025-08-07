@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  wolink-core:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - AI_GATEWAY_DATABASE_TYPE=mysql
+      - AI_GATEWAY_DATABASE_HOST=mysql
+      - AI_GATEWAY_DATABASE_PORT=3306
+      - AI_GATEWAY_DATABASE_USER=root
+      - AI_GATEWAY_DATABASE_PASSWORD=password
+      - AI_GATEWAY_DATABASE_DBNAME=ai_gateway
+      - AI_GATEWAY_DATABASE_CHARSET=utf8mb4
+      - AI_GATEWAY_DATABASE_PARSETIME=true
+      - AI_GATEWAY_DATABASE_LOC=Local
+      - AI_GATEWAY_REDIS_HOST=redis
+      - AI_GATEWAY_REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=ai_gateway
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:
