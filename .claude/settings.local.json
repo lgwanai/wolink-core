@@ -10,7 +10,8 @@
       "Bash(ls .planning/phases/01-security-foundation/*.md)",
       "Bash(ls -la internal/config/*test*.go internal/api/middleware/*test*.go)",
       "Bash(go test:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
