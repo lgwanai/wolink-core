@@ -3,7 +3,7 @@ phase: 1
 slug: security-foundation
 status: draft
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-04-04
 ---
 
@@ -38,13 +38,16 @@ created: 2026-04-04
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
+| 01-00-01 | 00 | 0 | - | setup | `go test -v ./internal/config/...` | created | pending |
+| 01-00-02 | 00 | 0 | - | setup | `go test -v ./internal/api/middleware/...` | created | pending |
 | 01-01-01 | 01 | 1 | SEC-01 | unit | `go test -v ./internal/config/...` | Wave 0 | pending |
 | 01-01-02 | 01 | 1 | SEC-01 | unit | `go test -v ./internal/config/...` | Wave 0 | pending |
-| 01-02-01 | 02 | 1 | SEC-02 | unit | `go test -v ./internal/config/...` | Wave 0 | pending |
-| 01-03-01 | 03 | 1 | SEC-03 | unit | `go test -v ./internal/api/middleware/...` | Wave 0 | pending |
-| 01-03-02 | 03 | 1 | SEC-03 | unit | `go test -v ./internal/api/middleware/...` | Wave 0 | pending |
-| 01-04-01 | 04 | 1 | SEC-04 | unit | `go test -v ./internal/services/...` | Wave 0 | pending |
-| 01-04-02 | 04 | 1 | SEC-04 | unit | `go test -v ./internal/api/handlers/...` | Wave 0 | pending |
+| 01-02-01 | 02 | 1 | SEC-03 | unit | `go test -v ./internal/api/middleware/...` | Wave 0 | pending |
+| 01-02-02 | 02 | 1 | SEC-03 | unit | `go test -v ./internal/config/... ./internal/api/middleware/...` | Wave 0 | pending |
+| 01-03-01 | 03 | 2 | SEC-04 | unit | `go test -v ./internal/models/...` | Wave 0 | pending |
+| 01-03-02 | 03 | 2 | SEC-04 | unit | `go test -v ./internal/api/handlers/...` | Wave 0 | pending |
+| 01-04-01 | 04 | 3 | SEC-04 | unit | `go test -v ./internal/models/...` | Wave 0 | pending |
+| 01-04-02 | 04 | 3 | SEC-04 | unit | `go test -v ./internal/api/handlers/...` | Wave 0 | pending |
 
 *Status: pending / green / red / flaky*
 
@@ -52,14 +55,14 @@ created: 2026-04-04
 
 ## Wave 0 Requirements
 
-- [ ] `internal/config/config_test.go` — tests for config validation
-- [ ] `internal/config/validator_test.go` — tests for validator
-- [ ] `internal/api/middleware/cors_test.go` — tests for CORS middleware
-- [ ] `internal/models/validation_test.go` — tests for request validation
-- [ ] `internal/api/handlers/validation_test.go` — tests for error formatting
-- [ ] `go get github.com/stretchr/testify` — assertion library
+- [x] `internal/config/config_test.go` — tests for config validation (placeholder created by 00-PLAN)
+- [x] `internal/config/validator_test.go` — tests for validator (placeholder created by 00-PLAN)
+- [x] `internal/api/middleware/cors_test.go` — tests for CORS middleware (placeholder created by 00-PLAN)
+- [x] `internal/models/validation_test.go` — tests for request validation (placeholder created by 00-PLAN)
+- [x] `internal/api/handlers/validation_test.go` — tests for error formatting (placeholder created by 00-PLAN)
+- [x] `go get github.com/stretchr/testify` — assertion library (installed by 00-PLAN)
 
-*Existing test infrastructure: None detected in codebase*
+*Existing test infrastructure: Wave 0 plan (00-PLAN.md) creates all scaffolds*
 
 ---
 
@@ -80,5 +83,6 @@ created: 2026-04-04
 - [x] No watch-mode flags
 - [x] Feedback latency < 10s
 - [x] `nyquist_compliant: true` set in frontmatter
+- [x] Wave 0 plan (00-PLAN.md) exists and creates test scaffolds
 
 **Approval:** complete
