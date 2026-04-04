@@ -28,13 +28,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. JWT secret shorter than 32 characters causes startup failure in production mode
   3. CORS rejects requests from origins not in the configured allowlist
   4. All user inputs pass through structured validation before processing
-**Plans**: TBD
+**Plans**: 4 plans in 1 wave
 
 Plans:
-- [ ] 01-01: Configuration validation and fail-fast
-- [ ] 01-02: JWT secret enforcement
-- [ ] 01-03: CORS configuration hardening
-- [ ] 01-04: Input validation enhancement
+- [ ] 01-01: Configuration validation and fail-fast (SEC-01, SEC-02)
+- [ ] 01-02: CORS configuration hardening (SEC-03)
+- [ ] 01-03: Input validation enhancement (SEC-04)
+- [ ] 01-04: Authentication request validation (SEC-04)
 
 ### Phase 2: Infrastructure Hardening
 **Goal**: Server handles production traffic with proper resource management and health visibility
@@ -96,7 +96,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Security Foundation | 0/4 | Not started | - |
+| 1. Security Foundation | 0/4 | Planning complete | - |
 | 2. Infrastructure Hardening | 0/5 | Not started | - |
 | 3. Observability | 0/4 | Not started | - |
 | 4. Testing & Validation | 0/4 | Not started | - |

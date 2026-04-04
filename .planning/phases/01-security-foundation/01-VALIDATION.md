@@ -2,7 +2,7 @@
 phase: 1
 slug: security-foundation
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-04-04
 ---
@@ -38,23 +38,25 @@ created: 2026-04-04
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 01-01-01 | 01 | 1 | SEC-01 | unit | `go test -v ./internal/config/...` | ❌ W0 | ⬜ pending |
-| 01-01-02 | 01 | 1 | SEC-01 | unit | `go test -v ./internal/config/...` | ❌ W0 | ⬜ pending |
-| 01-02-01 | 02 | 1 | SEC-02 | unit | `go test -v ./internal/config/...` | ❌ W0 | ⬜ pending |
-| 01-03-01 | 03 | 1 | SEC-03 | unit | `go test -v ./internal/api/middleware/...` | ❌ W0 | ⬜ pending |
-| 01-03-02 | 03 | 1 | SEC-03 | unit | `go test -v ./internal/api/middleware/...` | ❌ W0 | ⬜ pending |
-| 01-04-01 | 04 | 1 | SEC-04 | unit | `go test -v ./internal/services/...` | ❌ W0 | ⬜ pending |
-| 01-04-02 | 04 | 1 | SEC-04 | unit | `go test -v ./internal/api/handlers/...` | ❌ W0 | ⬜ pending |
+| 01-01-01 | 01 | 1 | SEC-01 | unit | `go test -v ./internal/config/...` | Wave 0 | pending |
+| 01-01-02 | 01 | 1 | SEC-01 | unit | `go test -v ./internal/config/...` | Wave 0 | pending |
+| 01-02-01 | 02 | 1 | SEC-02 | unit | `go test -v ./internal/config/...` | Wave 0 | pending |
+| 01-03-01 | 03 | 1 | SEC-03 | unit | `go test -v ./internal/api/middleware/...` | Wave 0 | pending |
+| 01-03-02 | 03 | 1 | SEC-03 | unit | `go test -v ./internal/api/middleware/...` | Wave 0 | pending |
+| 01-04-01 | 04 | 1 | SEC-04 | unit | `go test -v ./internal/services/...` | Wave 0 | pending |
+| 01-04-02 | 04 | 1 | SEC-04 | unit | `go test -v ./internal/api/handlers/...` | Wave 0 | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
 
 ---
 
 ## Wave 0 Requirements
 
 - [ ] `internal/config/config_test.go` — tests for config validation
+- [ ] `internal/config/validator_test.go` — tests for validator
 - [ ] `internal/api/middleware/cors_test.go` — tests for CORS middleware
-- [ ] `internal/services/security_service_test.go` — tests for input validation
+- [ ] `internal/models/validation_test.go` — tests for request validation
+- [ ] `internal/api/handlers/validation_test.go` — tests for error formatting
 - [ ] `go get github.com/stretchr/testify` — assertion library
 
 *Existing test infrastructure: None detected in codebase*
@@ -72,11 +74,11 @@ created: 2026-04-04
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 10s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 10s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** complete
