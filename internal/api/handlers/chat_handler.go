@@ -44,7 +44,7 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 	// 解析请求
 	var req models.ChatCompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": formatValidationError(err)})
 		return
 	}
 	

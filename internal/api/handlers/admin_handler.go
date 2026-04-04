@@ -29,9 +29,9 @@ func (h *AdminHandler) CreateAPIKey(c *gin.Context) {
 		DepartmentID uint   `json:"department_id" binding:"required"`
 		Name         string `json:"name" binding:"required"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": formatValidationError(err)})
 		return
 	}
 	
@@ -72,7 +72,7 @@ func (h *AdminHandler) UpdateAPIKey(c *gin.Context) {
 	}
 	
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": formatValidationError(err)})
 		return
 	}
 	
@@ -107,7 +107,7 @@ func (h *AdminHandler) CreateDepartment(c *gin.Context) {
 	}
 	
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": formatValidationError(err)})
 		return
 	}
 	
@@ -168,7 +168,7 @@ func (h *AdminHandler) UpdateModel(c *gin.Context) {
 	
 	var req models.ModelConfig
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": formatValidationError(err)})
 		return
 	}
 	

@@ -1,9 +1,7 @@
 package services
 
 import (
-	"fmt"
 	"regexp"
-	"strings"
 
 	"wolink-core/internal/config"
 )
@@ -58,16 +56,4 @@ func (s *SecurityService) DetectAndReplaceSensitiveInfo(text string) (cleanText 
 	}
 	
 	return cleanText, hasSensitive, sensitiveTypes
-}
-
-// ValidateRequest 验证请求内容
-func (s *SecurityService) ValidateRequest(content string) error {
-	// 可以添加更多验证逻辑
-	// 比如检查恶意内容、SQL注入等
-	
-	if strings.Contains(strings.ToLower(content), "drop table") {
-		return fmt.Errorf("potentially malicious content detected")
-	}
-	
-	return nil
 }
