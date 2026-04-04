@@ -29,17 +29,8 @@ func (h *AdminAuthHandler) Login(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Warnf("管理员登录请求参数错误: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "请求参数错误",
+			"error": formatValidationError(err),
 			"code":  "INVALID_PARAMS",
-		})
-		return
-	}
-
-	// 参数验证
-	if req.Username == "" || req.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "用户名和密码不能为空",
-			"code":  "MISSING_CREDENTIALS",
 		})
 		return
 	}
@@ -146,42 +137,25 @@ func (h *AdminAuthHandler) GetProfile(c *gin.Context) {
 
 // CreateAdmin 创建管理员用户
 func (h *AdminAuthHandler) CreateAdmin(c *gin.Context) {
-	var req struct {
-		Username string `json:"username" binding:"required"`
-		Password string `json:"password" binding:"required,min=6"`
-		Email    string `json:"email"`
-		Name     string `json:"name" binding:"required"`
-		Role     string `json:"role" binding:"required"`
-	}
+	var req models.CreateAdminRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Warnf("创建管理员请求参数错误: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "请求参数错误",
+			"error": formatValidationError(err),
 			"code":  "INVALID_PARAMS",
 		})
 		return
 	}
 
-	// 验证角色
-	validRoles := []string{"super_admin", "admin", "operator"}
-	validRole := false
-	for _, role := range validRoles {
-		if req.Role == role {
-			validRole = true
-			break
-		}
-	}
-	if !validRole {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "无效的角色类型",
-			"code":  "INVALID_ROLE",
-		})
-		return
+	// 默认角色为admin
+	role := req.Role
+	if role == "" {
+		role = "admin"
 	}
 
 	// 创建管理员
-	admin, err := h.adminAuthService.CreateAdminUser(req.Username, req.Password, req.Email, req.Name, req.Role)
+	admin, err := h.adminAuthService.CreateAdminUser(req.Username, req.Password, req.Email, req.Name, role)
 	if err != nil {
 		h.logger.Errorf("创建管理员失败: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -250,17 +224,17 @@ func (h *AdminAuthHandler) UpdateAdmin(c *gin.Context) {
 	}
 
 	var req struct {
-		Password *string `json:"password,omitempty"`
-		Email    *string `json:"email,omitempty"`
+		Password *string `json:"password,omitempty" binding:"omitempty,min=8,max=128"`
+		Email    *string `json:"email,omitempty" binding:"omitempty,email"`
 		Name     *string `json:"name,omitempty"`
-		Role     *string `json:"role,omitempty"`
-		Status   *string `json:"status,omitempty"`
+		Role     *string `json:"role,omitempty" binding:"omitempty,oneof=super_admin admin operator"`
+		Status   *string `json:"status,omitempty" binding:"omitempty,oneof=active inactive"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Warnf("更新管理员请求参数错误: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "请求参数错误",
+			"error": formatValidationError(err),
 			"code":  "INVALID_PARAMS",
 		})
 		return
@@ -269,13 +243,6 @@ func (h *AdminAuthHandler) UpdateAdmin(c *gin.Context) {
 	// 构建更新字段
 	updates := make(map[string]interface{})
 	if req.Password != nil && *req.Password != "" {
-		if len(*req.Password) < 6 {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "密码长度不能少于6位",
-				"code":  "PASSWORD_TOO_SHORT",
-			})
-			return
-		}
 		updates["password"] = *req.Password
 	}
 	if req.Email != nil {
@@ -285,31 +252,9 @@ func (h *AdminAuthHandler) UpdateAdmin(c *gin.Context) {
 		updates["name"] = *req.Name
 	}
 	if req.Role != nil {
-		validRoles := []string{"super_admin", "admin", "operator"}
-		validRole := false
-		for _, role := range validRoles {
-			if *req.Role == role {
-				validRole = true
-				break
-			}
-		}
-		if !validRole {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "无效的角色类型",
-				"code":  "INVALID_ROLE",
-			})
-			return
-		}
 		updates["role"] = *req.Role
 	}
 	if req.Status != nil {
-		if *req.Status != "active" && *req.Status != "inactive" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "无效的状态值",
-				"code":  "INVALID_STATUS",
-			})
-			return
-		}
 		updates["status"] = *req.Status
 	}
 

@@ -161,8 +161,23 @@ type AdminSession struct {
 
 // LoginRequest 登录请求结构
 type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username string `json:"username" binding:"required,min=3,max=50"`
+	Password string `json:"password" binding:"required,min=8,max=128"`
+}
+
+// CreateAdminRequest 创建管理员请求结构
+type CreateAdminRequest struct {
+	Username string `json:"username" binding:"required,min=3,max=50,alphanum"`
+	Password string `json:"password" binding:"required,min=8,max=128"`
+	Email    string `json:"email" binding:"required,email"`
+	Name     string `json:"name" binding:"required,min=1,max=100"`
+	Role     string `json:"role" binding:"omitempty,oneof=admin super_admin"`
+}
+
+// ChangePasswordRequest 修改密码请求结构
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required,min=8,max=128"`
+	NewPassword string `json:"new_password" binding:"required,min=8,max=128"`
 }
 
 // LoginResponse 登录响应结构
