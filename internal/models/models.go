@@ -184,17 +184,17 @@ func (c *Conversation) BeforeCreate(tx *gorm.DB) error {
 
 type ChatCompletionRequest struct {
 	Model       string                 `json:"model" binding:"required"`
-	Messages    []ChatMessage          `json:"messages" binding:"required"`
-	Temperature *float32               `json:"temperature,omitempty"`
-	MaxTokens   *int                   `json:"max_tokens,omitempty"`
+	Messages    []ChatMessage          `json:"messages" binding:"required,min=1,dive"`
+	Temperature *float32               `json:"temperature,omitempty" binding:"omitempty,min=0,max=2"`
+	MaxTokens   *int                   `json:"max_tokens,omitempty" binding:"omitempty,min=1,max=128000"`
 	Stream      bool                   `json:"stream,omitempty"`
 	User        string                 `json:"user,omitempty"`
 	Extra       map[string]interface{} `json:"-"` // 额外参数
 }
 
 type ChatMessage struct {
-	Role    string `json:"role" binding:"required"`    // system, user, assistant
-	Content string `json:"content" binding:"required"`
+	Role    string `json:"role" binding:"required,oneof=system user assistant"` // system, user, assistant
+	Content string `json:"content" binding:"required,min=1"`
 }
 
 type ChatCompletionResponse struct {
