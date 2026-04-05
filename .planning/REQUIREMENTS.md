@@ -27,7 +27,7 @@ Requirements for production readiness milestone. Each maps to roadmap phases.
 
 - [ ] **OBS-01**: Request ID generated or extracted from header and propagated through all layers
 - [ ] **OBS-02**: Structured JSON logging with request ID in all log entries
-- [ ] **OBS-03**: `/metrics` endpoint exposes Prometheus metrics (request rate, latency, errors)
+- [x] **OBS-03**: `/metrics` endpoint exposes Prometheus metrics (request rate, latency, errors)
 - [x] **OBS-04**: Standardized error types with consistent HTTP status mapping
 
 ### Testing
@@ -82,7 +82,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-06 | Phase 2 | Complete |
 | OBS-01 | Phase 3 | Pending |
 | OBS-02 | Phase 3 | Pending |
-| OBS-03 | Phase 3 | Pending |
+| OBS-03 | Phase 3 | Complete |
 | OBS-04 | Phase 3 | Complete |
 | TEST-01 | Phase 4 | Pending |
 | TEST-02 | Phase 4 | Pending |
