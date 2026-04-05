@@ -9,18 +9,18 @@ Requirements for production readiness milestone. Each maps to roadmap phases.
 
 ### Security
 
-- [ ] **SEC-01**: System validates configuration at startup and fails fast on missing/invalid values
-- [ ] **SEC-02**: JWT secret must be at least 32 characters with no production defaults
-- [ ] **SEC-03**: CORS allowed origins loaded from configuration with fail-fast in production mode
-- [ ] **SEC-04**: Input validation uses structured validation library with explicit rules
+- [x] **SEC-01**: System validates configuration at startup and fails fast on missing/invalid values
+- [x] **SEC-02**: JWT secret must be at least 32 characters with no production defaults
+- [x] **SEC-03**: CORS allowed origins loaded from configuration with fail-fast in production mode
+- [x] **SEC-04**: Input validation uses structured validation library with explicit rules
 
 ### Infrastructure
 
 - [ ] **INFRA-01**: Server implements graceful shutdown with configurable drain timeout (30s default)
-- [ ] **INFRA-02**: `/health` endpoint returns liveness status (server running)
-- [ ] **INFRA-03**: `/ready` endpoint checks database and Redis connectivity
-- [ ] **INFRA-04**: Database connection pool configured with max open/idle connections and lifetime
-- [ ] **INFRA-05**: Redis connection pool configured with pool size and idle connections
+- [x] **INFRA-02**: `/health` endpoint returns liveness status (server running)
+- [x] **INFRA-03**: `/ready` endpoint checks database and Redis connectivity
+- [x] **INFRA-04**: Database connection pool configured with max open/idle connections and lifetime
+- [x] **INFRA-05**: Redis connection pool configured with pool size and idle connections
 - [ ] **INFRA-06**: HTTP server configured with read/write/idle timeouts
 
 ### Observability
@@ -70,15 +70,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | Phase 1 | Pending |
-| SEC-02 | Phase 1 | Pending |
-| SEC-03 | Phase 1 | Pending |
-| SEC-04 | Phase 1 | Pending |
+| SEC-01 | Phase 1 | Complete |
+| SEC-02 | Phase 1 | Complete |
+| SEC-03 | Phase 1 | Complete |
+| SEC-04 | Phase 1 | Complete |
 | INFRA-01 | Phase 2 | Pending |
-| INFRA-02 | Phase 2 | Pending |
-| INFRA-03 | Phase 2 | Pending |
-| INFRA-04 | Phase 2 | Pending |
-| INFRA-05 | Phase 2 | Pending |
+| INFRA-02 | Phase 2 | Complete |
+| INFRA-03 | Phase 2 | Complete |
+| INFRA-04 | Phase 2 | Complete |
+| INFRA-05 | Phase 2 | Complete |
 | INFRA-06 | Phase 2 | Pending |
 | OBS-01 | Phase 3 | Pending |
 | OBS-02 | Phase 3 | Pending |

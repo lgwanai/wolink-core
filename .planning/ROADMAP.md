@@ -50,10 +50,10 @@ Plans:
 **Plans**: 5 plans in 2 waves
 
 Plans:
-- [ ] 02-01: Infrastructure configuration structs (INFRA-01, INFRA-04, INFRA-05, INFRA-06) - Wave 1
-- [ ] 02-02: Health and readiness endpoints (INFRA-02, INFRA-03) - Wave 1
-- [ ] 02-03: Database connection pooling (INFRA-04) - Wave 2
-- [ ] 02-04: Redis connection pooling (INFRA-05) - Wave 2
+- [x] 02-01: Infrastructure configuration structs (INFRA-01, INFRA-04, INFRA-05, INFRA-06) - Wave 1
+- [x] 02-02: Health and readiness endpoints (INFRA-02, INFRA-03) - Wave 1
+- [x] 02-03: Database connection pooling (INFRA-04) - Wave 2
+- [x] 02-04: Redis connection pooling (INFRA-05) - Wave 2
 - [ ] 02-05: HTTP server timeouts and shutdown (INFRA-01, INFRA-06) - Wave 2
 
 ### Phase 3: Observability
@@ -98,6 +98,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Security Foundation | 5/5 | Complete | 2026-04-05 |
-| 2. Infrastructure Hardening | 0/5 | Planning complete | - |
+| 2. Infrastructure Hardening | 4/5 | In progress | - |
 | 3. Observability | 0/4 | Not started | - |
 | 4. Testing & Validation | 0/4 | Not started | - |
