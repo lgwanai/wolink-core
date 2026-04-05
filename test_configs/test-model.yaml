@@ -1,0 +1,16 @@
+id: test-model
+name: test-model
+meta:
+  protocol: openai
+  capability:
+    function_call: true
+    input_modal: ["text"]
+    output_modal: ["text"]
+    max_tokens: 4096
+conn_config:
+  base_url: "https://api.test.com"
+  api_key: "test-api-key"
+  model: "test-model"
+  temperature: 0.7
+  max_tokens: 4096
+status: 1
