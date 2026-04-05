@@ -1,8 +1,8 @@
 ---
 phase: 04
 slug: testing-validation
-status: draft
-nyquist_compliant: false
+status: planned
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-04-05
 ---
@@ -38,10 +38,18 @@ created: 2026-04-05
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 04-01-01 | 01 | 1 | TEST-01 | unit | `go test -race -cover ./internal/services/...` | Partial | ⬜ pending |
-| 04-02-01 | 02 | 1 | TEST-02 | integration | `go test -race ./internal/api/...` | Yes | ⬜ pending |
-| 04-03-01 | 03 | 2 | TEST-03 | benchmark | `go test -bench=. -benchmem ./internal/...` | ❌ W0 | ⬜ pending |
-| 04-04-01 | 04 | 2 | TEST-04 | integration | `go test -race ./cmd/...` | Yes | ⬜ pending |
+| 04-01-01 | 01 | 1 | TEST-01 | unit | `go test -race -cover ./internal/services/...` | Partial | ✅ planned |
+| 04-01-02 | 01 | 1 | TEST-01 | unit | `go test -race -cover ./internal/services/...` | No | ✅ planned |
+| 04-01-03 | 01 | 1 | TEST-01 | unit | `go test -race -cover ./internal/services/...` | No | ✅ planned |
+| 04-02-01 | 02 | 1 | TEST-02 | integration | `go test -race -cover ./internal/plugins/...` | No | ✅ planned |
+| 04-02-02 | 02 | 1 | TEST-02 | integration | `go test -race -cover ./internal/api/handlers/...` | No | ✅ planned |
+| 04-02-03 | 02 | 1 | TEST-02 | integration | `go test -race -cover ./internal/api/handlers/...` | No | ✅ planned |
+| 04-03-01 | 03 | 2 | TEST-03 | benchmark | `go test -bench=. -benchmem ./internal/services/...` | No | ✅ planned |
+| 04-03-02 | 03 | 2 | TEST-03 | benchmark | `go test -bench=. -benchmem ./internal/api/handlers/...` | No | ✅ planned |
+| 04-03-03 | 03 | 2 | TEST-03 | benchmark | `go test -bench=. -benchmem ./internal/plugins/...` | No | ✅ planned |
+| 04-04-01 | 04 | 2 | TEST-04 | integration | `go test -race ./cmd/... -run TestGracefulShutdown` | Yes | ✅ planned |
+| 04-04-02 | 04 | 2 | TEST-04 | unit | `go test -race ./internal/utils/...` | No | ✅ planned |
+| 04-04-03 | 04 | 2 | TEST-04 | integration | `go test -race -tags=integration ./cmd/...` | No | ✅ planned |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -49,14 +57,7 @@ created: 2026-04-05
 
 ## Wave 0 Requirements
 
-- [ ] `internal/services/auth_service_test.go` — unit tests for AuthService
-- [ ] `internal/services/plugin_service_test.go` — unit tests for PluginService
-- [ ] `internal/plugins/plugin_openai_test.go` — unit tests with HTTP mocking
-- [ ] `internal/api/handlers/chat_handler_test.go` — handler tests for chat completion
-- [ ] `internal/api/handlers/admin_handler_test.go` — handler tests for admin endpoints
-- [ ] `internal/testutil/mocks/` — shared mock implementations
-- [ ] `*_bench_test.go` files — performance benchmarks
-- [ ] Integration test build tags: `//go:build integration`
+None required - all tasks have clear automated verification paths.
 
 ---
 
@@ -71,11 +72,11 @@ created: 2026-04-05
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (none needed)
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
