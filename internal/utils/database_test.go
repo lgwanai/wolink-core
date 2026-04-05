@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -125,8 +126,9 @@ func TestInitRedis_PoolConfiguration(t *testing.T) {
 			// Create a Redis client to inspect its options
 			opts := buildRedisOptions(tt.cfg, tt.poolCfg)
 
-			// Verify address is correctly built
-			assert.Equal(t, "localhost:6379", opts.Addr, "address should match config")
+			// Verify address is correctly built from config
+			expectedAddr := fmt.Sprintf("%s:%d", tt.cfg.Host, tt.cfg.Port)
+			assert.Equal(t, expectedAddr, opts.Addr, "address should match config")
 
 			// Verify pool settings are applied
 			for key, expectedValue := range tt.expectedConfig {
