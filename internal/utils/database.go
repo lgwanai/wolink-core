@@ -69,14 +69,18 @@ func buildRedisOptions(cfg config.RedisConfig, poolCfg config.RedisPoolConfig) *
 	return opts
 }
 
-func InitDB(cfg config.DatabaseConfig) (*gorm.DB, error) {
+// InitDB initializes a database connection with the given configuration.
+// The poolCfg parameter allows configuration of connection pool settings
+// including MaxOpenConns, MaxIdleConns, ConnMaxLifetime, and ConnMaxIdleTime.
+// Zero values in poolCfg will use Go's database/sql defaults.
+func InitDB(cfg config.DatabaseConfig, poolCfg config.DBPoolConfig) (*gorm.DB, error) {
 	var dsn string
 	var dialector gorm.Dialector
 
 	switch strings.ToLower(cfg.Type) {
 	case "mysql":
 		dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=%t&loc=%s",
-			cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName, 
+			cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName,
 			cfg.Charset, cfg.ParseTime, cfg.Loc)
 		dialector = mysql.Open(dsn)
 	case "postgres", "postgresql":
@@ -92,6 +96,11 @@ func InitDB(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to %s database: %w", cfg.Type, err)
+	}
+
+	// Configure connection pool (INFRA-04)
+	if err := ConfigureDBPool(db, poolCfg); err != nil {
+		return nil, fmt.Errorf("failed to configure connection pool: %w", err)
 	}
 
 	// 自动迁移
