@@ -11,7 +11,30 @@
       "Bash(ls -la internal/config/*test*.go internal/api/middleware/*test*.go)",
       "Bash(go test:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(/usr/local/go/bin/go test:*)",
+      "Bash(/opt/homebrew/bin/go test:*)",
+      "Bash(go build:*)",
+      "Bash(ls -la .planning/phases/03-observability/03-*-PLAN.md)",
+      "Bash(ls .planning/phases/03-observability/03-*-PLAN.md)",
+      "Bash(go get:*)",
+      "Bash(go mod:*)",
+      "Bash(ls:*)",
+      "Bash([ -f \"/Users/wuliang/workspace/wolink-core/internal/observability/errors.go\" ])",
+      "Bash([ -f \"/Users/wuliang/workspace/wolink-core/internal/observability/errors_test.go\" ])",
+      "Bash([ -f \"/Users/wuliang/workspace/wolink-core/.planning/phases/03-observability/03-04-SUMMARY.md\" ])",
+      "Bash([ -f \"internal/observability/logger_test.go\" ])",
+      "Bash([ -f \"internal/observability/metrics.go\" ])",
+      "Bash([ -f \"internal/observability/metrics_test.go\" ])",
+      "Bash([ -f \"internal/api/handlers/metrics_handler.go\" ])",
+      "Bash([ -f \"internal/api/middleware/logging_test.go\" ])",
+      "Bash([ -f \".planning/phases/03-observability/03-00-SUMMARY.md\" ])",
+      "Bash([ -f \"/Users/wuliang/workspace/wolink-core/.planning/phases/03-observability/03-05-SUMMARY.md\" ])",
+      "Bash([ -f \"/Users/wuliang/workspace/wolink-core/internal/api/routes.go\" ])",
+      "Bash([ -f \"/Users/wuliang/workspace/wolink-core/internal/utils/logger.go\" ])",
+      "Bash([ -f \"/Users/wuliang/workspace/wolink-core/internal/api/routes_test.go\" ])",
+      "Bash(cat /Users/wuliang/workspace/wolink-core/.planning/phases/04-testing-validation/*-CONTEXT.md)",
+      "Bash(grep -l \"func Benchmark\" /Users/wuliang/workspace/wolink-core/**/*.go)"
     ]
   }
 }
