@@ -13,7 +13,7 @@ Transform wolink-core AI Gateway from early development to production-ready stat
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Security Foundation** - Configuration validation, JWT enforcement, CORS hardening, input validation
-- [ ] **Phase 2: Infrastructure Hardening** - Graceful shutdown, health endpoints, connection pooling, timeouts
+- [x] **Phase 2: Infrastructure Hardening** - Graceful shutdown, health endpoints, connection pooling, timeouts
 - [ ] **Phase 3: Observability** - Request tracing, structured logging, Prometheus metrics, error standardization
 - [ ] **Phase 4: Testing & Validation** - Unit tests, integration tests, benchmarks, shutdown tests
 
@@ -54,7 +54,7 @@ Plans:
 - [x] 02-02: Health and readiness endpoints (INFRA-02, INFRA-03) - Wave 1
 - [x] 02-03: Database connection pooling (INFRA-04) - Wave 2
 - [x] 02-04: Redis connection pooling (INFRA-05) - Wave 2
-- [ ] 02-05: HTTP server timeouts and shutdown (INFRA-01, INFRA-06) - Wave 2
+- [x] 02-05: HTTP server timeouts and shutdown (INFRA-01, INFRA-06) - Wave 2
 
 ### Phase 3: Observability
 **Goal**: All requests are traceable and system behavior is measurable through logs and metrics
@@ -98,6 +98,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Security Foundation | 5/5 | Complete | 2026-04-05 |
-| 2. Infrastructure Hardening | 4/5 | In progress | - |
+| 2. Infrastructure Hardening | 5/5 | Complete | 2026-04-05 |
 | 3. Observability | 0/4 | Not started | - |
 | 4. Testing & Validation | 0/4 | Not started | - |

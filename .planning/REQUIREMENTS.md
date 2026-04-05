@@ -16,12 +16,12 @@ Requirements for production readiness milestone. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Server implements graceful shutdown with configurable drain timeout (30s default)
+- [x] **INFRA-01**: Server implements graceful shutdown with configurable drain timeout (30s default)
 - [x] **INFRA-02**: `/health` endpoint returns liveness status (server running)
 - [x] **INFRA-03**: `/ready` endpoint checks database and Redis connectivity
 - [x] **INFRA-04**: Database connection pool configured with max open/idle connections and lifetime
 - [x] **INFRA-05**: Redis connection pool configured with pool size and idle connections
-- [ ] **INFRA-06**: HTTP server configured with read/write/idle timeouts
+- [x] **INFRA-06**: HTTP server configured with read/write/idle timeouts
 
 ### Observability
 
@@ -74,12 +74,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-02 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Complete |
 | SEC-04 | Phase 1 | Complete |
-| INFRA-01 | Phase 2 | Pending |
+| INFRA-01 | Phase 2 | Complete |
 | INFRA-02 | Phase 2 | Complete |
 | INFRA-03 | Phase 2 | Complete |
 | INFRA-04 | Phase 2 | Complete |
 | INFRA-05 | Phase 2 | Complete |
-| INFRA-06 | Phase 2 | Pending |
+| INFRA-06 | Phase 2 | Complete |
 | OBS-01 | Phase 3 | Pending |
 | OBS-02 | Phase 3 | Pending |
 | OBS-03 | Phase 3 | Pending |
