@@ -4,6 +4,7 @@ import (
 	"wolink-core/internal/api/handlers"
 	"wolink-core/internal/api/middleware"
 	"wolink-core/internal/config"
+	"wolink-core/internal/observability"
 	"wolink-core/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -13,10 +14,19 @@ import (
 func SetupRoutes(serviceManager *services.ServiceManager, logger *logrus.Logger, cfg *config.Config) *gin.Engine {
 	router := gin.New()
 
-	// 全局中间件
+	// Middleware chain in order:
+	// 1. Recovery - catch panics
+	// 2. RequestID - generate/propagate trace ID
+	// 3. Prometheus - collect metrics
+	// 4. Logger - structured logging with request ID
+	// 5. CORS - handle CORS
+	// 6. ErrorHandler - consistent error responses
 	router.Use(gin.Recovery())
-	router.Use(middleware.Logger(logger))
+	router.Use(middleware.RequestID())
+	router.Use(observability.PrometheusMiddleware())
+	router.Use(middleware.LoggerWithRequestID(logger))
 	router.Use(middleware.CORS())
+	router.Use(observability.ErrorHandler())
 
 	// 创建处理器
 	chatHandler := handlers.NewChatHandler(serviceManager, logger)
@@ -24,12 +34,14 @@ func SetupRoutes(serviceManager *services.ServiceManager, logger *logrus.Logger,
 	pluginHandler := handlers.NewPluginHandler(serviceManager, logger)
 	adminAuthHandler := handlers.NewAdminAuthHandler(serviceManager.AdminAuthService, logger)
 	healthHandler := handlers.NewHealthHandler(serviceManager.DB, serviceManager.Redis)
+	metricsHandler := handlers.NewMetricsHandler()
 
 	// 健康检查 (无需认证)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 	router.GET("/ready", healthHandler.Ready)
+	router.GET("/metrics", metricsHandler.Metrics)
 	
 	// OpenAI 兼容的 API 路由
 	v1 := router.Group("/v1")
