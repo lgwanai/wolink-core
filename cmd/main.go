@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"wolink-core/internal/api"
 	"wolink-core/internal/config"
@@ -28,13 +27,13 @@ func main() {
 	logger := utils.NewLogger(cfg.Log.Level)
 
 	// 初始化数据库
-	db, err := utils.InitDB(cfg.Database)
+	db, err := utils.InitDB(cfg.Database, cfg.Infrastructure.Database)
 	if err != nil {
 		logger.Fatalf("Failed to init database: %v", err)
 	}
 
 	// 初始化 Redis
-	rdb, err := utils.InitRedis(cfg.Redis)
+	rdb, err := utils.InitRedis(cfg.Redis, cfg.Infrastructure.Redis)
 	if err != nil {
 		logger.Fatalf("Failed to init redis: %v", err)
 	}
@@ -52,8 +51,12 @@ func main() {
 
 	// 创建 HTTP 服务器
 	srv := &http.Server{
-		Addr:    ":" + cfg.Server.Port,
-		Handler: router,
+		Addr:              ":" + cfg.Server.Port,
+		Handler:           router,
+		ReadTimeout:       cfg.Infrastructure.ReadTimeout,
+		WriteTimeout:      cfg.Infrastructure.WriteTimeout,
+		IdleTimeout:       cfg.Infrastructure.IdleTimeout,
+		ReadHeaderTimeout: cfg.Infrastructure.ReadHeaderTimeout,
 	}
 
 	// 启动服务器
@@ -75,7 +78,7 @@ func main() {
 	serviceManager.Stop()
 
 	// 优雅关闭
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Infrastructure.ShutdownTimeout)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
