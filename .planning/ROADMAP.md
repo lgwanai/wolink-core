@@ -65,13 +65,15 @@ Plans:
   2. Log entries are structured JSON containing request ID, timestamp, and contextual fields
   3. `/metrics` endpoint exposes request rate, latency, and error counters in Prometheus format
   4. All API errors return consistent HTTP status codes matching error type
-**Plans**: TBD
+**Plans**: 6 plans in 3 waves (Wave 0 + Waves 1-2)
 
 Plans:
-- [ ] 03-01: Request ID middleware
-- [ ] 03-02: Structured JSON logging
-- [ ] 03-03: Prometheus metrics endpoint
-- [ ] 03-04: Error type standardization
+- [ ] 03-00: Wave 0 - Install dependencies and test scaffolds - Wave 0
+- [ ] 03-01: Request ID middleware (OBS-01) - Wave 1
+- [ ] 03-02: Structured JSON logging (OBS-02) - Wave 1
+- [ ] 03-03: Prometheus metrics endpoint (OBS-03) - Wave 1
+- [ ] 03-04: Error type standardization (OBS-04) - Wave 1
+- [ ] 03-05: Integration and middleware chain - Wave 2
 
 ### Phase 4: Testing & Validation
 **Goal**: All critical paths have automated tests providing confidence for production deployment
@@ -99,5 +101,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. Security Foundation | 5/5 | Complete | 2026-04-05 |
 | 2. Infrastructure Hardening | 5/5 | Complete | 2026-04-05 |
-| 3. Observability | 0/4 | Not started | - |
+| 3. Observability | 0/6 | Not started | - |
 | 4. Testing & Validation | 0/4 | Not started | - |
