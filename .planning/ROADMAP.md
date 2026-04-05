@@ -68,7 +68,7 @@ Plans:
 **Plans**: 6 plans in 3 waves (Wave 0 + Waves 1-2)
 
 Plans:
-- [ ] 03-00: Wave 0 - Install dependencies and test scaffolds - Wave 0
+- [x] 03-00: Wave 0 - Install dependencies and test scaffolds - Wave 0
 - [ ] 03-01: Request ID middleware (OBS-01) - Wave 1
 - [ ] 03-02: Structured JSON logging (OBS-02) - Wave 1
 - [ ] 03-03: Prometheus metrics endpoint (OBS-03) - Wave 1
@@ -101,5 +101,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. Security Foundation | 5/5 | Complete | 2026-04-05 |
 | 2. Infrastructure Hardening | 5/5 | Complete | 2026-04-05 |
-| 3. Observability | 1/6 | In progress | - |
+| 3. Observability | 2/6 | In progress | - |
 | 4. Testing & Validation | 0/4 | Not started | - |
