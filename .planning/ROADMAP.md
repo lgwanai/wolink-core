@@ -84,13 +84,13 @@ Plans:
   2. All API endpoints have integration tests verifying request/response behavior
   3. Critical paths (chat completion, streaming) have performance benchmarks
   4. Graceful shutdown is verified through automated tests
-**Plans**: TBD
+**Plans**: 4 plans in 2 waves
 
 Plans:
-- [ ] 04-01: Unit test suite setup and service tests
-- [ ] 04-02: Integration tests for API endpoints
-- [ ] 04-03: Performance benchmarks
-- [ ] 04-04: Graceful shutdown tests
+- [ ] 04-01: Unit tests for services (TEST-01) - Wave 1
+- [ ] 04-02: Integration tests for handlers and plugins (TEST-02) - Wave 1
+- [ ] 04-03: Performance benchmarks (TEST-03) - Wave 2
+- [ ] 04-04: Graceful shutdown tests (TEST-04) - Wave 2
 
 ## Progress
 
