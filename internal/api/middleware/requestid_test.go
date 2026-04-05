@@ -56,8 +56,8 @@ func TestRequestID_AccessibleInContext(t *testing.T) {
 	router := gin.New()
 	router.Use(middleware.RequestID())
 	router.GET("/test", func(c *gin.Context) {
-		// Request ID is available via c.GetHeader() after middleware sets it
-		contextID = c.GetHeader("X-Request-ID")
+		// Request ID is stored in gin.Context and accessible via GetString
+		contextID = c.GetString("X-Request-ID")
 		c.String(http.StatusOK, "ok")
 	})
 
@@ -66,6 +66,8 @@ func TestRequestID_AccessibleInContext(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.NotEmpty(t, contextID)
-	assert.Equal(t, contextID, w.Header().Get("X-Request-ID"))
+	// The contextID should not be empty after the request is processed
+	assert.NotEmpty(t, w.Header().Get("X-Request-ID"), "X-Request-ID header should be set")
+	// The value stored in context should match the header
+	assert.Equal(t, w.Header().Get("X-Request-ID"), contextID, "context value should match header")
 }
