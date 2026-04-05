@@ -2,17 +2,47 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	Log      LogConfig      `mapstructure:"log"`
-	Security SecurityConfig `mapstructure:"security"`
-	Models   ModelsConfig   `mapstructure:"models"`
+	Server        ServerConfig        `mapstructure:"server"`
+	Database      DatabaseConfig      `mapstructure:"database"`
+	Redis         RedisConfig         `mapstructure:"redis"`
+	Log           LogConfig           `mapstructure:"log"`
+	Security      SecurityConfig      `mapstructure:"security"`
+	Models        ModelsConfig        `mapstructure:"models"`
+	Infrastructure InfrastructureConfig `mapstructure:"infrastructure"`
+}
+
+// InfrastructureConfig holds infrastructure-level settings for graceful shutdown,
+// HTTP server timeouts, and connection pool configurations.
+type InfrastructureConfig struct {
+	ShutdownTimeout   time.Duration `mapstructure:"shutdown_timeout"`
+	ReadTimeout       time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout      time.Duration `mapstructure:"write_timeout"`
+	IdleTimeout       time.Duration `mapstructure:"idle_timeout"`
+	ReadHeaderTimeout time.Duration `mapstructure:"read_header_timeout"`
+	Database          DBPoolConfig  `mapstructure:"database_pool"`
+	Redis             RedisPoolConfig `mapstructure:"redis_pool"`
+}
+
+// DBPoolConfig holds database connection pool settings.
+type DBPoolConfig struct {
+	MaxOpenConns    int           `mapstructure:"max_open_conns"`
+	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
+	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time"`
+}
+
+// RedisPoolConfig holds Redis connection pool settings.
+type RedisPoolConfig struct {
+	PoolSize        int           `mapstructure:"pool_size"`
+	MinIdleConns    int           `mapstructure:"min_idle_conns"`
+	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	PoolTimeout     time.Duration `mapstructure:"pool_timeout"`
 }
 
 type ServerConfig struct {
@@ -119,4 +149,21 @@ func setDefaults() {
 	})
 	
 	viper.SetDefault("models.config_path", "./configs/models")
+
+	// Infrastructure defaults
+	viper.SetDefault("infrastructure.shutdown_timeout", "30s")
+	viper.SetDefault("infrastructure.read_timeout", "15s")
+	viper.SetDefault("infrastructure.write_timeout", "30s")
+	viper.SetDefault("infrastructure.idle_timeout", "120s")
+	viper.SetDefault("infrastructure.read_header_timeout", "5s")
+
+	// Database pool defaults
+	viper.SetDefault("infrastructure.database_pool.max_open_conns", 25)
+	viper.SetDefault("infrastructure.database_pool.max_idle_conns", 10)
+	viper.SetDefault("infrastructure.database_pool.conn_max_lifetime", "5m")
+
+	// Redis pool defaults
+	viper.SetDefault("infrastructure.redis_pool.pool_size", 20)
+	viper.SetDefault("infrastructure.redis_pool.min_idle_conns", 5)
+	viper.SetDefault("infrastructure.redis_pool.conn_max_lifetime", "5m")
 }
