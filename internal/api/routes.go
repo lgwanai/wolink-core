@@ -12,22 +12,24 @@ import (
 
 func SetupRoutes(serviceManager *services.ServiceManager, logger *logrus.Logger, cfg *config.Config) *gin.Engine {
 	router := gin.New()
-	
+
 	// 全局中间件
 	router.Use(gin.Recovery())
 	router.Use(middleware.Logger(logger))
 	router.Use(middleware.CORS())
-	
+
 	// 创建处理器
 	chatHandler := handlers.NewChatHandler(serviceManager, logger)
 	adminHandler := handlers.NewAdminHandler(serviceManager, logger)
 	pluginHandler := handlers.NewPluginHandler(serviceManager, logger)
 	adminAuthHandler := handlers.NewAdminAuthHandler(serviceManager.AdminAuthService, logger)
-	
-	// 健康检查
+	healthHandler := handlers.NewHealthHandler(serviceManager.DB, serviceManager.Redis)
+
+	// 健康检查 (无需认证)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
+	router.GET("/ready", healthHandler.Ready)
 	
 	// OpenAI 兼容的 API 路由
 	v1 := router.Group("/v1")
