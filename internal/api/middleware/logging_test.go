@@ -2,8 +2,6 @@ package middleware_test
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestLoggingMiddleware_WithRequestID(t *testing.T) {
