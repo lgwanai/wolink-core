@@ -15,6 +15,60 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+// ConfigureDBPool configures the underlying database connection pool.
+// Values of 0 are skipped, allowing Go's defaults to apply.
+// This function is used to apply DBPoolConfig settings after database connection.
+func ConfigureDBPool(db *gorm.DB, cfg config.DBPoolConfig) error {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get underlying sql.DB: %w", err)
+	}
+
+	if cfg.MaxOpenConns > 0 {
+		sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	}
+	if cfg.MaxIdleConns > 0 {
+		sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
+	}
+	if cfg.ConnMaxLifetime > 0 {
+		sqlDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	}
+	if cfg.ConnMaxIdleTime > 0 {
+		sqlDB.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
+	}
+
+	return nil
+}
+
+// buildRedisOptions creates redis.Options from the given configuration.
+// It applies pool settings only when they have non-zero values, allowing
+// go-redis defaults to be used when not explicitly configured.
+func buildRedisOptions(cfg config.RedisConfig, poolCfg config.RedisPoolConfig) *redis.Options {
+	opts := &redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Password: cfg.Password,
+		DB:       cfg.DB,
+	}
+
+	// Apply pool configuration (INFRA-05)
+	// Only override defaults when values are explicitly set (>0)
+	if poolCfg.PoolSize > 0 {
+		opts.PoolSize = poolCfg.PoolSize
+	}
+	if poolCfg.MinIdleConns > 0 {
+		opts.MinIdleConns = poolCfg.MinIdleConns
+	}
+	if poolCfg.ConnMaxLifetime > 0 {
+		// go-redis v8 uses MaxConnAge for connection max lifetime
+		opts.MaxConnAge = poolCfg.ConnMaxLifetime
+	}
+	if poolCfg.PoolTimeout > 0 {
+		opts.PoolTimeout = poolCfg.PoolTimeout
+	}
+
+	return opts
+}
+
 func InitDB(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	var dsn string
 	var dialector gorm.Dialector
@@ -55,12 +109,13 @@ func InitDB(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	return db, nil
 }
 
-func InitRedis(cfg config.RedisConfig) (*redis.Client, error) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		Password: cfg.Password,
-		DB:       cfg.DB,
-	})
+// InitRedis initializes a Redis client with the given configuration.
+// The poolCfg parameter allows configuration of connection pool settings
+// including PoolSize, MinIdleConns, ConnMaxLifetime, and PoolTimeout.
+// Zero values in poolCfg will use go-redis defaults.
+func InitRedis(cfg config.RedisConfig, poolCfg config.RedisPoolConfig) (*redis.Client, error) {
+	opts := buildRedisOptions(cfg, poolCfg)
+	rdb := redis.NewClient(opts)
 
 	// 测试连接
 	ctx := context.Background()
