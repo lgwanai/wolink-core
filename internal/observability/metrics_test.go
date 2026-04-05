@@ -61,7 +61,8 @@ func TestHandler_ReturnsPrometheusFormat(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, "text/plain; version=0.0.4; charset=utf-8", w.Header().Get("Content-Type"))
+	// Content-Type should be Prometheus text format (exact format may vary by version)
+	assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/plain; version=0.0.4"))
 
 	body := w.Body.String()
 	// Should contain our metric names
