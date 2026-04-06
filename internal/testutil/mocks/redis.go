@@ -18,10 +18,17 @@ import (
 //	    // Use client as redis.Client
 //	    // mini provides direct access to in-memory data
 //	}
-func NewMockRedis(t *testing.T) (*miniredis.Miniredis, *redis.Client) {
+//
+// Can also be used with *testing.B for benchmarks:
+//
+//	func BenchmarkSomething(b *testing.B) {
+//	    mini, client := mocks.NewMockRedis(b)
+//	}
+func NewMockRedis(t testing.TB) (*miniredis.Miniredis, *redis.Client) {
 	t.Helper()
 
 	// miniredis.RunT automatically handles cleanup via t.Cleanup
+	// RunT accepts miniredis.Tester interface which both *testing.T and *testing.B implement
 	mr := miniredis.RunT(t)
 
 	client := redis.NewClient(&redis.Options{

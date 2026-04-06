@@ -38,18 +38,18 @@ created: 2026-04-05
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 04-01-01 | 01 | 1 | TEST-01 | unit | `go test -race -cover ./internal/services/...` | Partial | ✅ planned |
-| 04-01-02 | 01 | 1 | TEST-01 | unit | `go test -race -cover ./internal/services/...` | No | ✅ planned |
-| 04-01-03 | 01 | 1 | TEST-01 | unit | `go test -race -cover ./internal/services/...` | No | ✅ planned |
-| 04-02-01 | 02 | 1 | TEST-02 | integration | `go test -race -cover ./internal/plugins/...` | No | ✅ planned |
-| 04-02-02 | 02 | 1 | TEST-02 | integration | `go test -race -cover ./internal/api/handlers/...` | No | ✅ planned |
-| 04-02-03 | 02 | 1 | TEST-02 | integration | `go test -race -cover ./internal/api/handlers/...` | No | ✅ planned |
-| 04-03-01 | 03 | 2 | TEST-03 | benchmark | `go test -bench=. -benchmem ./internal/services/...` | No | ✅ planned |
-| 04-03-02 | 03 | 2 | TEST-03 | benchmark | `go test -bench=. -benchmem ./internal/api/handlers/...` | No | ✅ planned |
-| 04-03-03 | 03 | 2 | TEST-03 | benchmark | `go test -bench=. -benchmem ./internal/plugins/...` | No | ✅ planned |
-| 04-04-01 | 04 | 2 | TEST-04 | integration | `go test -race ./cmd/... -run TestGracefulShutdown` | Yes | ✅ planned |
-| 04-04-02 | 04 | 2 | TEST-04 | unit | `go test -race ./internal/utils/...` | No | ✅ planned |
-| 04-04-03 | 04 | 2 | TEST-04 | integration | `go test -race -tags=integration ./cmd/...` | No | ✅ planned |
+| 04-01-01 | 01 | 1 | TEST-01 | unit | `go test -race -cover ./internal/services/...` | Yes | ✅ green |
+| 04-01-02 | 01 | 1 | TEST-01 | unit | `go test -race -cover ./internal/services/...` | Yes | ✅ green |
+| 04-01-03 | 01 | 1 | TEST-01 | unit | `go test -race -cover ./internal/services/...` | Yes | ✅ green |
+| 04-02-01 | 02 | 1 | TEST-02 | integration | `go test -race -cover ./internal/plugins/...` | Yes | ✅ green |
+| 04-02-02 | 02 | 1 | TEST-02 | integration | `go test -race -cover ./internal/api/handlers/...` | Yes | ✅ green |
+| 04-02-03 | 02 | 1 | TEST-02 | integration | `go test -race -cover ./internal/api/handlers/...` | Yes | ✅ green |
+| 04-03-01 | 03 | 2 | TEST-03 | benchmark | `go test -bench=. -benchmem ./internal/services/...` | Yes | ✅ green |
+| 04-03-02 | 03 | 2 | TEST-03 | benchmark | `go test -bench=. -benchmem ./internal/api/handlers/...` | Yes | ✅ green |
+| 04-03-03 | 03 | 2 | TEST-03 | benchmark | `go test -bench=. -benchmem ./internal/plugins/...` | Yes | ✅ green |
+| 04-04-01 | 04 | 2 | TEST-04 | integration | `go test -race ./cmd/... -run TestGracefulShutdown` | Yes | ✅ green |
+| 04-04-02 | 04 | 2 | TEST-04 | unit | `go test -race ./internal/utils/...` | Yes | ✅ green |
+| 04-04-03 | 04 | 2 | TEST-04 | integration | `go test -race -tags=integration ./cmd/...` | No | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
