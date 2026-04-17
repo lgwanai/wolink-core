@@ -49,15 +49,30 @@ func SetupRoutes(serviceManager *services.ServiceManager, logger *logrus.Logger,
 		// 需要API Key认证的路由
 		v1.Use(middleware.APIKeyAuth(serviceManager.AuthService))
 		
-		// 聊天完成接口
+		// 聊天完成接口 (OpenAI)
 		v1.POST("/chat/completions", chatHandler.ChatCompletions)
+		
+		// 聊天完成接口 (Anthropic)
+		v1.POST("/messages", chatHandler.Messages)
 		
 		// Embedding 接口
 		v1.POST("/embeddings", chatHandler.Embeddings)
 		
+		// Rerank 接口
+		v1.POST("/rerank", chatHandler.Rerank)
+		
+		// 语音转文本接口
+		v1.POST("/audio/transcriptions", chatHandler.AudioTranscriptions)
+		
+		// 文本转语音接口
+		v1.POST("/audio/speech", chatHandler.AudioSpeech)
+		
 		// 模型列表
 		v1.GET("/models", chatHandler.ListModels)
 	}
+
+	// WebSocket 代理 (用于流式语音/多模态模型，例如 qwen3-asr, qwen3-tts)
+	router.GET("/v1/ws", middleware.APIKeyAuth(serviceManager.AuthService), chatHandler.WebSocketProxy)
 	
 	// 管理员认证接口（无需认证）
 	auth := router.Group("/admin/auth")

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -41,13 +42,13 @@ func NewPluginService(logger *logrus.Logger, cfg *config.Config) *PluginService 
 		plugins:     make(map[string]plugins.ModelPlugin),
 		pluginInfos: make(map[string]*plugins.PluginInfo),
 	}
-	
+
 	// 注册内置插件
 	service.registerBuiltinPlugins()
-	
+
 	// 启动插件监控器
 	service.startPluginWatcher()
-	
+
 	return service
 }
 
@@ -64,7 +65,7 @@ func (s *PluginService) registerBuiltinPlugins() {
 		Loaded:      true,
 		Healthy:     true,
 	})
-	
+
 	// 注册 DeepSeek 插件
 	deepseekPlugin := plugins.NewDeepSeekPlugin(s.logger)
 	s.registerPlugin(deepseekPlugin, &plugins.PluginInfo{
@@ -76,7 +77,7 @@ func (s *PluginService) registerBuiltinPlugins() {
 		Loaded:      true,
 		Healthy:     true,
 	})
-	
+
 	// 注册 Claude 插件
 	claudePlugin := plugins.NewClaudePlugin(s.logger)
 	s.registerPlugin(claudePlugin, &plugins.PluginInfo{
@@ -98,10 +99,10 @@ func (s *PluginService) startPluginWatcher() {
 		pluginDir: pluginDir,
 		stopCh:    make(chan struct{}),
 	}
-	
+
 	// 初始加载插件
 	s.loadPluginsFromDirectory(pluginDir)
-	
+
 	// 启动监控协程
 	go s.watcher.watch()
 }
@@ -112,32 +113,32 @@ func (s *PluginService) checkPluginChanges(dir string, lastModTime map[string]ti
 		if err != nil {
 			return err
 		}
-		
+
 		if d.IsDir() || !strings.HasPrefix(d.Name(), "plugin_") || !strings.HasSuffix(d.Name(), ".go") {
 			return nil
 		}
-		
+
 		// 检查文件修改时间
 		info, err := d.Info()
 		if err != nil {
 			return err
 		}
-		
+
 		fileName := d.Name()
 		currentModTime := info.ModTime()
-		
+
 		if lastTime, exists := lastModTime[fileName]; !exists || currentModTime.After(lastTime) {
 			protocol := strings.TrimSuffix(strings.TrimPrefix(fileName, "plugin_"), ".go")
 			s.logger.Infof("Plugin file changed: %s for protocol: %s", fileName, protocol)
 			lastModTime[fileName] = currentModTime
-			
+
 			// 这里可以实现动态重载逻辑
 			// 目前使用静态注册，所以只记录变化
 		}
-		
+
 		return nil
 	})
-	
+
 	if err != nil {
 		s.logger.Errorf("Failed to check plugin changes: %v", err)
 	}
@@ -154,9 +155,9 @@ func (w *PluginWatcher) watch() {
 	// 降低心跳频率，避免性能问题
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	
+
 	lastModTime := make(map[string]time.Time)
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -172,11 +173,11 @@ func (w *PluginWatcher) watch() {
 func (s *PluginService) registerPlugin(plugin plugins.ModelPlugin, info *plugins.PluginInfo) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	protocol := plugin.Protocol()
 	s.plugins[protocol] = plugin
 	s.pluginInfos[protocol] = info
-	
+
 	s.logger.Infof("Plugin registered: %s for protocol %s", plugin.Name(), protocol)
 }
 
@@ -198,7 +199,7 @@ func (s *PluginService) RegisterPlugin(plugin plugins.ModelPlugin) {
 func (s *PluginService) GetPlugin(protocol string) (plugins.ModelPlugin, bool) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	plugin, exists := s.plugins[protocol]
 	return plugin, exists
 }
@@ -209,9 +210,9 @@ func (s *PluginService) CallModel(ctx context.Context, modelConfig *models.Model
 	if !exists {
 		return nil, fmt.Errorf("plugin not found for protocol: %s", modelConfig.Protocol)
 	}
-	
+
 	s.logger.Debugf("Calling model %s via plugin %s", modelConfig.Name, plugin.Name())
-	
+
 	return plugin.Call(ctx, modelConfig, request)
 }
 
@@ -221,22 +222,82 @@ func (s *PluginService) CallModelStream(ctx context.Context, modelConfig *models
 	if !exists {
 		return nil, fmt.Errorf("plugin not found for protocol: %s", modelConfig.Protocol)
 	}
-	
+
 	s.logger.Debugf("Calling model %s stream via plugin %s", modelConfig.Name, plugin.Name())
-	
+
 	return plugin.CallStream(ctx, modelConfig, request)
+}
+
+// CallEmbedding 调用Embedding模型
+func (s *PluginService) CallEmbedding(ctx context.Context, modelConfig *models.ModelConfig, request *models.EmbeddingRequest) (*models.EmbeddingResponse, error) {
+	plugin, exists := s.GetPlugin(modelConfig.Protocol)
+	if !exists {
+		return nil, fmt.Errorf("plugin not found for protocol: %s", modelConfig.Protocol)
+	}
+
+	if ep, ok := plugin.(plugins.EmbeddingPlugin); ok {
+		s.logger.Debugf("Calling embedding model %s via plugin %s", modelConfig.Name, plugin.Name())
+		return ep.CallEmbedding(ctx, modelConfig, request)
+	}
+
+	return nil, fmt.Errorf("plugin %s does not support embeddings", plugin.Name())
+}
+
+// CallRerank 调用Rerank模型
+func (s *PluginService) CallRerank(ctx context.Context, modelConfig *models.ModelConfig, request *models.RerankRequest) (*models.RerankResponse, error) {
+	plugin, exists := s.GetPlugin(modelConfig.Protocol)
+	if !exists {
+		return nil, fmt.Errorf("plugin not found for protocol: %s", modelConfig.Protocol)
+	}
+
+	if rp, ok := plugin.(plugins.RerankPlugin); ok {
+		s.logger.Debugf("Calling rerank model %s via plugin %s", modelConfig.Name, plugin.Name())
+		return rp.CallRerank(ctx, modelConfig, request)
+	}
+
+	return nil, fmt.Errorf("plugin %s does not support rerank", plugin.Name())
+}
+
+// CallAudioTranscription 调用Audio Transcription模型
+func (s *PluginService) CallAudioTranscription(ctx context.Context, modelConfig *models.ModelConfig, request *models.AudioTranscriptionRequest) (*models.AudioTranscriptionResponse, error) {
+	plugin, exists := s.GetPlugin(modelConfig.Protocol)
+	if !exists {
+		return nil, fmt.Errorf("plugin not found for protocol: %s", modelConfig.Protocol)
+	}
+
+	if ap, ok := plugin.(plugins.AudioPlugin); ok {
+		s.logger.Debugf("Calling audio transcription model %s via plugin %s", modelConfig.Name, plugin.Name())
+		return ap.CallAudioTranscription(ctx, modelConfig, request)
+	}
+
+	return nil, fmt.Errorf("plugin %s does not support audio transcription", plugin.Name())
+}
+
+// CallAudioSpeech 调用Audio Speech模型
+func (s *PluginService) CallAudioSpeech(ctx context.Context, modelConfig *models.ModelConfig, request *models.AudioSpeechRequest) (*http.Response, error) {
+	plugin, exists := s.GetPlugin(modelConfig.Protocol)
+	if !exists {
+		return nil, fmt.Errorf("plugin not found for protocol: %s", modelConfig.Protocol)
+	}
+
+	if ap, ok := plugin.(plugins.AudioPlugin); ok {
+		s.logger.Debugf("Calling audio speech model %s via plugin %s", modelConfig.Name, plugin.Name())
+		return ap.CallAudioSpeech(ctx, modelConfig, request)
+	}
+
+	return nil, fmt.Errorf("plugin %s does not support audio speech", plugin.Name())
 }
 
 // ListPlugins 列出所有插件
 func (s *PluginService) ListPlugins() map[string]*plugins.PluginInfo {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	result := make(map[string]*plugins.PluginInfo)
 	for protocol, info := range s.pluginInfos {
 		result[protocol] = info
 	}
-	
+
 	return result
 }
 
@@ -244,7 +305,7 @@ func (s *PluginService) ListPlugins() map[string]*plugins.PluginInfo {
 func (s *PluginService) ReloadPlugin(protocol string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	// 这里可以实现插件的重新加载逻辑
 	// 由于Go的限制，目前只是标记为重新加载
 	if info, exists := s.pluginInfos[protocol]; exists {
@@ -252,7 +313,7 @@ func (s *PluginService) ReloadPlugin(protocol string) error {
 		s.logger.Infof("Plugin %s reloaded", protocol)
 		return nil
 	}
-	
+
 	return fmt.Errorf("plugin %s not found", protocol)
 }
 
@@ -260,7 +321,7 @@ func (s *PluginService) ReloadPlugin(protocol string) error {
 func (s *PluginService) UnloadPlugin(protocol string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	if _, exists := s.plugins[protocol]; exists {
 		delete(s.plugins, protocol)
 		if info, exists := s.pluginInfos[protocol]; exists {
@@ -269,7 +330,7 @@ func (s *PluginService) UnloadPlugin(protocol string) error {
 		s.logger.Infof("Plugin %s unloaded", protocol)
 		return nil
 	}
-	
+
 	return fmt.Errorf("plugin %s not found", protocol)
 }
 
@@ -277,7 +338,7 @@ func (s *PluginService) UnloadPlugin(protocol string) error {
 func (s *PluginService) HealthCheckAll() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	for protocol := range s.plugins {
 		if info, exists := s.pluginInfos[protocol]; exists {
 			// 这里需要一个示例配置来进行健康检查

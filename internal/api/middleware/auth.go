@@ -12,27 +12,33 @@ import (
 
 func APIKeyAuth(authService *services.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var apiKeyID string
+
 		// 从 Authorization header 获取 API Key
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		if authHeader != "" {
+			// 检查格式：Bearer ak-xxx
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				apiKeyID = parts[1]
+			}
+		}
+
+		// 如果 Header 中没有，尝试从 Query 参数中获取 (用于 WebSocket 等场景)
+		if apiKeyID == "" {
+			apiKeyID = c.Query("api_key")
+			if apiKeyID == "" {
+				apiKeyID = c.Query("token")
+			}
+		}
+
+		if apiKeyID == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "missing authorization header",
+				"error": "missing authorization credentials",
 			})
 			c.Abort()
 			return
 		}
-		
-		// 检查格式：Bearer ak-xxx
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "invalid authorization header format",
-			})
-			c.Abort()
-			return
-		}
-		
-		apiKeyID := parts[1]
 		
 		// 验证 API Key
 		apiKey, err := authService.ValidateAPIKey(apiKeyID)

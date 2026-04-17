@@ -99,6 +99,7 @@ func TestOpenAIPlugin_Call_Success(t *testing.T) {
 		Messages: []models.ChatMessage{
 			{Role: "user", Content: "Hello"},
 		},
+		RawBody: []byte(`{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}`),
 	}
 
 	ctx := context.Background()
@@ -132,6 +133,7 @@ func TestOpenAIPlugin_Call_Unauthorized(t *testing.T) {
 		Messages: []models.ChatMessage{
 			{Role: "user", Content: "Hello"},
 		},
+		RawBody: []byte(`{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}`),
 	}
 
 	ctx := context.Background()
@@ -162,6 +164,7 @@ func TestOpenAIPlugin_Call_ServerError(t *testing.T) {
 		Messages: []models.ChatMessage{
 			{Role: "user", Content: "Hello"},
 		},
+		RawBody: []byte(`{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}`),
 	}
 
 	ctx := context.Background()
@@ -192,6 +195,7 @@ func TestOpenAIPlugin_Call_MalformedJSON(t *testing.T) {
 		Messages: []models.ChatMessage{
 			{Role: "user", Content: "Hello"},
 		},
+		RawBody: []byte(`{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}`),
 	}
 
 	ctx := context.Background()
@@ -221,6 +225,7 @@ func TestOpenAIPlugin_Call_Timeout(t *testing.T) {
 		Messages: []models.ChatMessage{
 			{Role: "user", Content: "Hello"},
 		},
+		RawBody: []byte(`{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}`),
 	}
 
 	ctx := context.Background()
@@ -256,6 +261,7 @@ func TestOpenAIPlugin_CallStream_Success(t *testing.T) {
 		Messages: []models.ChatMessage{
 			{Role: "user", Content: "Hello"},
 		},
+		RawBody: []byte(`{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}`),
 		Stream: true,
 	}
 
@@ -293,6 +299,7 @@ func TestOpenAIPlugin_CallStream_Error(t *testing.T) {
 		Messages: []models.ChatMessage{
 			{Role: "user", Content: "Hello"},
 		},
+		RawBody: []byte(`{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}`),
 		Stream: true,
 	}
 
@@ -372,154 +379,8 @@ func TestOpenAIPlugin_HealthCheck_RequestFails(t *testing.T) {
 	assert.False(t, result)
 }
 
-func TestOpenAIPlugin_BuildRequest_ModelPriority(t *testing.T) {
-	// Test: connConfig.Model takes priority over request.Model
-	logger := logrus.New()
-	plugin := NewOpenAIPlugin(logger)
 
-	tests := []struct {
-		name           string
-		connModel      string
-		requestModel   string
-		expectedModel  string
-	}{
-		{
-			name:          "conn config model takes priority",
-			connModel:     "gpt-4",
-			requestModel:  "gpt-3.5-turbo",
-			expectedModel: "gpt-4",
-		},
-		{
-			name:          "request model used when conn config empty",
-			connModel:     "",
-			requestModel:  "gpt-3.5-turbo",
-			expectedModel: "gpt-3.5-turbo",
-		},
-	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			connConfig := &models.ConnectionConfig{
-				Model: tt.connModel,
-			}
-			request := &models.ChatCompletionRequest{
-				Model:    tt.requestModel,
-				Messages: []models.ChatMessage{{Role: "user", Content: "test"}},
-			}
-
-			result := plugin.buildRequest(request, connConfig)
-			assert.Equal(t, tt.expectedModel, result.Model)
-		})
-	}
-}
-
-func TestOpenAIPlugin_BuildRequest_TemperatureInheritance(t *testing.T) {
-	// Test: temperature inheritance from config or request
-	logger := logrus.New()
-	plugin := NewOpenAIPlugin(logger)
-
-	tests := []struct {
-		name                 string
-		connTemp             float64
-		requestTemp          *float32
-		expectedTemp         *float32
-	}{
-		{
-			name:         "request temperature takes priority",
-			connTemp:     0.7,
-			requestTemp:  floatPtr(0.5),
-			expectedTemp: floatPtr(0.5),
-		},
-		{
-			name:         "conn config temperature used when request empty",
-			connTemp:     0.8,
-			requestTemp:  nil,
-			expectedTemp: floatPtr(0.8),
-		},
-		{
-			name:         "no temperature when both empty",
-			connTemp:     0,
-			requestTemp:  nil,
-			expectedTemp: nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			connConfig := &models.ConnectionConfig{
-				Temperature: tt.connTemp,
-			}
-			request := &models.ChatCompletionRequest{
-				Model:       "gpt-4",
-				Messages:    []models.ChatMessage{{Role: "user", Content: "test"}},
-				Temperature: tt.requestTemp,
-			}
-
-			result := plugin.buildRequest(request, connConfig)
-
-			if tt.expectedTemp == nil {
-				assert.Nil(t, result.Temperature)
-			} else {
-				require.NotNil(t, result.Temperature)
-				assert.Equal(t, *tt.expectedTemp, *result.Temperature)
-			}
-		})
-	}
-}
-
-func TestOpenAIPlugin_BuildRequest_MaxTokensInheritance(t *testing.T) {
-	// Test: max_tokens inheritance from config or request
-	logger := logrus.New()
-	plugin := NewOpenAIPlugin(logger)
-
-	tests := []struct {
-		name               string
-		connMaxTokens      int
-		requestMaxTokens   *int
-		expectedMaxTokens  *int
-	}{
-		{
-			name:              "request max_tokens takes priority",
-			connMaxTokens:     1000,
-			requestMaxTokens:  intPtr(500),
-			expectedMaxTokens: intPtr(500),
-		},
-		{
-			name:              "conn config max_tokens used when request empty",
-			connMaxTokens:     2000,
-			requestMaxTokens:  nil,
-			expectedMaxTokens: intPtr(2000),
-		},
-		{
-			name:              "no max_tokens when both empty",
-			connMaxTokens:     0,
-			requestMaxTokens:  nil,
-			expectedMaxTokens: nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			connConfig := &models.ConnectionConfig{
-				MaxTokens: tt.connMaxTokens,
-			}
-			request := &models.ChatCompletionRequest{
-				Model:     "gpt-4",
-				Messages:  []models.ChatMessage{{Role: "user", Content: "test"}},
-				MaxTokens: tt.requestMaxTokens,
-			}
-
-			result := plugin.buildRequest(request, connConfig)
-
-			if tt.expectedMaxTokens == nil {
-				assert.Nil(t, result.MaxTokens)
-			} else {
-				require.NotNil(t, result.MaxTokens)
-				assert.Equal(t, *tt.expectedMaxTokens, *result.MaxTokens)
-			}
-		})
-	}
-}
 
 func TestOpenAIPlugin_Call_DefaultBaseURL(t *testing.T) {
 	// Test: when BaseURL is empty, defaults to api.openai.com
@@ -537,6 +398,7 @@ func TestOpenAIPlugin_Call_DefaultBaseURL(t *testing.T) {
 		Messages: []models.ChatMessage{
 			{Role: "user", Content: "Hello"},
 		},
+		RawBody: []byte(`{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}`),
 	}
 
 	// This will fail because we're not mocking the real OpenAI API

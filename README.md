@@ -154,6 +154,22 @@ curl -X POST http://localhost:8990/admin/api-keys \
 
 ## API 使用示例
 
+### ASR 语音转文本与逐字时间戳 (兼容 OpenAI)
+
+支持将音频文件转录为文本，并可通过 oMLX 补丁支持强大的**强制对齐 (Forced Alignment)** 以获取逐字级别的时间戳 (`char_level_info`)。
+
+```bash
+curl -X POST http://localhost:8080/v1/audio/transcriptions \
+  -H "Authorization: Bearer ak-your-api-key" \
+  -F "file=@/path/to/your/audio.mp3" \
+  -F "model=Qwen3-ASR-1.7B-8bit" \
+  -F "response_format=verbose_json" \
+  -F "timestamp_granularities[]=word" \
+  -F "forced_aligner=Qwen3-ForcedAligner-0.6B"
+```
+
+> **oMLX 逐字时间戳补丁**：默认的 oMLX 底层服务不返回 `char_level_info`。如果你使用 macOS 上的 oMLX.app 作为本地模型后端，请运行本项目提供的 `patch/omlx_asr_patch/apply_patch.sh` 脚本来修改 oMLX 源码，使其支持强制对齐与逐字时间戳返回。详细说明请参考 `patch/omlx_asr_patch/README.md`。
+
 ### 聊天完成（兼容 OpenAI）
 
 ```bash

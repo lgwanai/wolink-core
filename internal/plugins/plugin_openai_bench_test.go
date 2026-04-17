@@ -174,6 +174,7 @@ func BenchmarkOpenAIPlugin_CallStream(b *testing.B) {
 		Messages: []models.ChatMessage{
 			{Role: "user", Content: "Hello"},
 		},
+		RawBody: []byte(`{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}`),
 		Stream: true,
 	}
 
@@ -230,28 +231,6 @@ func BenchmarkOpenAIPlugin_CallStream_Reading(b *testing.B) {
 }
 
 // BenchmarkOpenAIPlugin_BuildRequest benchmarks the request building logic.
-func BenchmarkOpenAIPlugin_BuildRequest(b *testing.B) {
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
-	plugin := NewOpenAIPlugin(logger)
-
-	connConfig := &models.ConnectionConfig{
-		Model:       "gpt-4",
-		Temperature: 0.7,
-		MaxTokens:   1000,
-	}
-	request := &models.ChatCompletionRequest{
-		Model:    "gpt-4",
-		Messages: []models.ChatMessage{{Role: "user", Content: "Hello"}},
-	}
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		_ = plugin.buildRequest(request, connConfig)
-	}
-}
 
 // BenchmarkOpenAIPlugin_RequestMarshal benchmarks JSON marshaling of requests.
 func BenchmarkOpenAIPlugin_RequestMarshal(b *testing.B) {

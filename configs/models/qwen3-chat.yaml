@@ -1,0 +1,11 @@
+id: Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit
+name: Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit
+description:
+  zh-CN: Qwen3.5 27B Model
+type: text_generation
+protocol: openai
+status: 1
+connection:
+  base_url: http://localhost:8099
+  api_key: ""
+  model: Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit

@@ -13,32 +13,32 @@ type Department struct {
 	Name      string    `json:"name" gorm:"type:varchar(100);uniqueIndex;not null"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	
+
 	APIKeys []APIKey `json:"api_keys" gorm:"foreignKey:DepartmentID"`
 }
 
 // APIKey 部门API密钥表
 type APIKey struct {
-	ID           uint      `json:"id" gorm:"primaryKey"`
-	DepartmentID uint      `json:"department_id" gorm:"not null"`
-	KeyID        string    `json:"key_id" gorm:"type:varchar(100);uniqueIndex;not null"` // 对外显示的key
-	KeySecret    string    `json:"-" gorm:"type:varchar(100);not null"`                  // 实际的密钥，不返回给前端
-	Name         string    `json:"name" gorm:"type:varchar(100)"`
-	Status       string    `json:"status" gorm:"type:varchar(20);default:'active'"` // active, disabled
-	
+	ID           uint   `json:"id" gorm:"primaryKey"`
+	DepartmentID uint   `json:"department_id" gorm:"not null"`
+	KeyID        string `json:"key_id" gorm:"type:varchar(100);uniqueIndex;not null"` // 对外显示的key
+	KeySecret    string `json:"-" gorm:"type:varchar(100);not null"`                  // 实际的密钥，不返回给前端
+	Name         string `json:"name" gorm:"type:varchar(100)"`
+	Status       string `json:"status" gorm:"type:varchar(20);default:'active'"` // active, disabled
+
 	// 使用限制
-	DailyLimit    int64 `json:"daily_limit" gorm:"default:10000"`    // 每日调用限制
-	MonthlyLimit  int64 `json:"monthly_limit" gorm:"default:300000"` // 每月调用限制
-	ConcurrentLimit int `json:"concurrent_limit" gorm:"default:10"`  // 并发限制
-	
+	DailyLimit      int64 `json:"daily_limit" gorm:"default:10000"`    // 每日调用限制
+	MonthlyLimit    int64 `json:"monthly_limit" gorm:"default:300000"` // 每月调用限制
+	ConcurrentLimit int   `json:"concurrent_limit" gorm:"default:10"`  // 并发限制
+
 	// 使用统计
 	DailyUsage   int64 `json:"daily_usage" gorm:"default:0"`
 	MonthlyUsage int64 `json:"monthly_usage" gorm:"default:0"`
 	TotalUsage   int64 `json:"total_usage" gorm:"default:0"`
-	
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	
+
 	Department Department `json:"department" gorm:"foreignKey:DepartmentID"`
 }
 
@@ -48,7 +48,7 @@ type ModelRegistry struct {
 	ConfigID   string `json:"config_id" gorm:"type:varchar(50);uniqueIndex;not null"` // 配置文件中的ID
 	Name       string `json:"name" gorm:"type:varchar(100);index;not null"`           // 模型名称
 	ConfigFile string `json:"config_file" gorm:"type:varchar(200);not null"`          // 配置文件名
-	
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -56,18 +56,18 @@ type ModelRegistry struct {
 // ModelConfig 运行时模型配置（从配置文件加载）
 type ModelConfig struct {
 	// 基本信息
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	IconURI     string                 `json:"icon_uri"`
-	IconURL     string                 `json:"icon_url"`
-	Description map[string]string      `json:"description"`
-	
+	ID          string            `json:"id"`
+	Name        string            `json:"name"`
+	IconURI     string            `json:"icon_uri"`
+	IconURL     string            `json:"icon_url"`
+	Description map[string]string `json:"description"`
+
 	// 元数据
-	Protocol    string                 `json:"protocol"`
-	Capability  CapabilityConfig       `json:"capability"`
-	ConnConfig  ConnectionConfig       `json:"conn_config"`
-	Parameters  []ParameterConfig      `json:"parameters"`
-	Status      int                    `json:"status"`
+	Protocol   string            `json:"protocol"`
+	Capability CapabilityConfig  `json:"capability"`
+	ConnConfig ConnectionConfig  `json:"conn_config"`
+	Parameters []ParameterConfig `json:"parameters"`
+	Status     int               `json:"status"`
 }
 
 // APIKeyModelMapping API密钥与模型的映射关系
@@ -75,42 +75,42 @@ type APIKeyModelMapping struct {
 	ID              uint `json:"id" gorm:"primaryKey"`
 	APIKeyID        uint `json:"api_key_id" gorm:"not null;index"`
 	ModelRegistryID uint `json:"model_registry_id" gorm:"not null;index"`
-	
+
 	// 路由配置
 	RouteType string `json:"route_type" gorm:"type:varchar(20);default:'random'"` // random, round_robin, weighted
 	Priority  int    `json:"priority" gorm:"default:0"`                           // 优先级
-	
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	
+
 	APIKey        APIKey        `json:"api_key" gorm:"foreignKey:APIKeyID"`
 	ModelRegistry ModelRegistry `json:"model_registry" gorm:"foreignKey:ModelRegistryID"`
 }
 
 // Conversation 对话记录表
 type Conversation struct {
-	ID           string    `json:"id" gorm:"type:varchar(50);primaryKey"` // UUID
-	APIKeyID     uint      `json:"api_key_id" gorm:"not null"`
-	DepartmentID uint      `json:"department_id" gorm:"not null"`
-	ModelName    string    `json:"model_name" gorm:"type:varchar(100);not null"`
-	
+	ID           string `json:"id" gorm:"type:varchar(50);primaryKey"` // UUID
+	APIKeyID     uint   `json:"api_key_id" gorm:"not null"`
+	DepartmentID uint   `json:"department_id" gorm:"not null"`
+	ModelName    string `json:"model_name" gorm:"type:varchar(100);not null"`
+
 	// 请求信息
 	RequestID    string `json:"request_id" gorm:"type:varchar(50);index"`
 	UserMessage  string `json:"user_message" gorm:"type:text"`
 	SystemPrompt string `json:"system_prompt" gorm:"type:text"`
-	
+
 	// 响应信息
 	AssistantMessage string `json:"assistant_message" gorm:"type:text"`
 	TokensUsed       int    `json:"tokens_used"`
 	ResponseTime     int64  `json:"response_time"` // 毫秒
-	
+
 	// 敏感信息检测
 	HasSensitiveInfo bool   `json:"has_sensitive_info" gorm:"default:false"`
 	SensitiveTypes   string `json:"sensitive_types" gorm:"type:varchar(500)"` // JSON数组，存储检测到的敏感信息类型
-	
+
 	CreatedAt time.Time `json:"created_at" gorm:"index"`
 	UpdatedAt time.Time `json:"updated_at"`
-	
+
 	APIKey     APIKey     `json:"api_key" gorm:"foreignKey:APIKeyID"`
 	Department Department `json:"department" gorm:"foreignKey:DepartmentID"`
 }
@@ -126,7 +126,7 @@ type UsageLog struct {
 	ResponseTime int64     `json:"response_time"`
 	Status       string    `json:"status" gorm:"type:varchar(20)"` // success, error
 	ErrorMessage string    `json:"error_message" gorm:"type:text"`
-	
+
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -137,13 +137,13 @@ type AdminUser struct {
 	Password string `json:"-" gorm:"type:varchar(255);not null"` // 密码哈希，不返回给前端
 	Email    string `json:"email" gorm:"type:varchar(100);uniqueIndex"`
 	Name     string `json:"name" gorm:"type:varchar(100)"`
-	Role     string `json:"role" gorm:"type:varchar(20);default:'admin'"` // admin, super_admin
+	Role     string `json:"role" gorm:"type:varchar(20);default:'admin'"`    // admin, super_admin
 	Status   string `json:"status" gorm:"type:varchar(20);default:'active'"` // active, disabled
-	
+
 	// 最后登录信息
 	LastLoginAt *time.Time `json:"last_login_at"`
 	LastLoginIP string     `json:"last_login_ip" gorm:"type:varchar(45)"`
-	
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -155,7 +155,7 @@ type AdminSession struct {
 	Token     string    `json:"-" gorm:"type:varchar(500);uniqueIndex;not null"` // JWT token哈希
 	ExpiresAt time.Time `json:"expires_at" gorm:"index"`
 	CreatedAt time.Time `json:"created_at"`
-	
+
 	AdminUser AdminUser `json:"admin_user" gorm:"foreignKey:AdminID"`
 }
 
@@ -205,6 +205,7 @@ type ChatCompletionRequest struct {
 	Stream      bool                   `json:"stream,omitempty"`
 	User        string                 `json:"user,omitempty"`
 	Extra       map[string]interface{} `json:"-"` // 额外参数
+	RawBody     []byte                 `json:"-"` // 原始请求体，用于网关完全透传
 }
 
 type ChatMessage struct {
@@ -243,26 +244,165 @@ type ChatCompletionStreamResponse struct {
 }
 
 type ChatCompletionStreamChoice struct {
-	Index int                      `json:"index"`
-	Delta ChatCompletionStreamDelta `json:"delta"`
-	FinishReason *string            `json:"finish_reason"`
+	Index        int                       `json:"index"`
+	Delta        ChatCompletionStreamDelta `json:"delta"`
+	FinishReason *string                   `json:"finish_reason"`
 }
 
 type ChatCompletionStreamDelta struct {
 	Role    string `json:"role,omitempty"`
 	Content string `json:"content,omitempty"`
-}// 模型配置文件结构
+}
+
+// Anthropic API 兼容的请求和响应结构
+
+type AnthropicMessageRequest struct {
+	Model         string                 `json:"model" binding:"required"`
+	Messages      []AnthropicMessage     `json:"messages" binding:"required,min=1"`
+	System        interface{}            `json:"system,omitempty"` // 可以是string或array
+	MaxTokens     int                    `json:"max_tokens" binding:"required"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty"`
+	StopSequences []string               `json:"stop_sequences,omitempty"`
+	Stream        bool                   `json:"stream,omitempty"`
+	Temperature   *float32               `json:"temperature,omitempty"`
+	TopP          *float32               `json:"top_p,omitempty"`
+	TopK          *int                   `json:"top_k,omitempty"`
+	Extra         map[string]interface{} `json:"-"` // 额外参数
+}
+
+type AnthropicMessage struct {
+	Role    string      `json:"role" binding:"required,oneof=user assistant"`
+	Content interface{} `json:"content" binding:"required"` // 可以是string或array
+}
+
+type AnthropicMessageResponse struct {
+	ID           string             `json:"id"`
+	Type         string             `json:"type"`
+	Role         string             `json:"role"`
+	Content      []AnthropicContent `json:"content"`
+	Model        string             `json:"model"`
+	StopReason   *string            `json:"stop_reason"`
+	StopSequence *string            `json:"stop_sequence"`
+	Usage        AnthropicUsage     `json:"usage"`
+}
+
+type AnthropicContent struct {
+	Type string `json:"type"`
+	Text string `json:"text,omitempty"`
+}
+
+type AnthropicUsage struct {
+	InputTokens  int `json:"input_tokens"`
+	OutputTokens int `json:"output_tokens"`
+}
+
+// Embedding API 请求和响应结构
+
+type EmbeddingRequest struct {
+	Model          string      `json:"model" binding:"required"`
+	Input          interface{} `json:"input" binding:"required"`  // string or array of strings
+	EncodingFormat string      `json:"encoding_format,omitempty"` // float, base64
+	Dimensions     *int        `json:"dimensions,omitempty"`
+	User           string      `json:"user,omitempty"`
+	RawBody        []byte      `json:"-"` // 原始请求体，用于网关完全透传
+}
+
+type EmbeddingResponse struct {
+	Object string          `json:"object"`
+	Data   []EmbeddingData `json:"data"`
+	Model  string          `json:"model"`
+	Usage  Usage           `json:"usage"`
+}
+
+type EmbeddingData struct {
+	Object    string    `json:"object"`
+	Index     int       `json:"index"`
+	Embedding []float32 `json:"embedding"`
+}
+
+// Rerank API 请求和响应结构
+
+type RerankRequest struct {
+	Model           string   `json:"model" binding:"required"`
+	Query           string   `json:"query" binding:"required"`
+	Documents       []string `json:"documents" binding:"required"`
+	TopN            *int     `json:"top_n,omitempty"`
+	ReturnDocuments bool     `json:"return_documents,omitempty"`
+	RawBody         []byte   `json:"-"` // 原始请求体，用于网关完全透传
+}
+
+type RerankResponse struct {
+	ID      string       `json:"id,omitempty"`
+	Model   string       `json:"model,omitempty"`
+	Results []RerankData `json:"results"`
+	Usage   Usage        `json:"usage,omitempty"`
+}
+
+type RerankData struct {
+	Index          int                    `json:"index"`
+	RelevanceScore float32                `json:"relevance_score"`
+	Document       map[string]interface{} `json:"document,omitempty"`
+}
+
+// Audio API 请求和响应结构
+
+type AudioTranscriptionRequest struct {
+	File           interface{} `json:"file" binding:"required"` // Usually handled via multipart form
+	Model          string      `json:"model" binding:"required"`
+	Language       string      `json:"language,omitempty"`
+	Prompt         string      `json:"prompt,omitempty"`
+	ResponseFormat string      `json:"response_format,omitempty"`
+	Temperature    *float32    `json:"temperature,omitempty"`
+	TimestampGran  []string    `json:"timestamp_granularities,omitempty"`
+	ForcedAligner  string      `json:"forced_aligner,omitempty"`
+}
+
+type AudioTranscriptionResponse struct {
+	TaskID        string    `json:"task_id,omitempty"`
+	Text          string    `json:"text,omitempty"`
+	Language      string    `json:"language,omitempty"`
+	Duration      float32   `json:"duration,omitempty"`
+	Words         []Word    `json:"words,omitempty"`
+	CharLevelInfo []Word    `json:"char_level_info,omitempty"`
+	Segments      []Segment `json:"segments,omitempty"`
+}
+
+type Word struct {
+	Text  string  `json:"text"`
+	Start float32 `json:"start"`
+	End   float32 `json:"end"`
+}
+
+type Segment struct {
+	ID               int     `json:"id"`
+	Seek             int     `json:"seek"`
+	Start            float32 `json:"start"`
+	End              float32 `json:"end"`
+	Text             string  `json:"text"`
+	Tokens           []int   `json:"tokens"`
+	Temperature      float32 `json:"temperature"`
+	AvgLogprob       float32 `json:"avg_logprob"`
+	CompressionRatio float32 `json:"compression_ratio"`
+	NoSpeechProb     float32 `json:"no_speech_prob"`
+}
+
+type AudioSpeechRequest struct {
+	Model   string `json:"model" binding:"required"`
+	RawBody []byte `json:"-"`
+}
+
+// 模型配置文件结构
 
 type ModelConfigFile struct {
-	ID          string                 `yaml:"id"`
-	Name        string                 `yaml:"name"`
-	IconURI     string                 `yaml:"icon_uri"`
-	IconURL     string                 `yaml:"icon_url"`
-	Description map[string]string      `yaml:"description"`
-	Parameters  []ParameterConfig      `yaml:"default_parameters"`
-	Meta        MetaConfig             `yaml:"meta"`
-	ConnConfig  ConnectionConfig       `yaml:"conn_config"`
-	Status      int                    `yaml:"status"`
+	ID          string            `yaml:"id"`
+	Name        string            `yaml:"name"`
+	IconURI     string            `yaml:"icon_uri"`
+	IconURL     string            `yaml:"icon_url"`
+	Description map[string]string `yaml:"description"`
+	Parameters  []ParameterConfig `yaml:"default_parameters"`
+	Meta        MetaConfig        `yaml:"meta"`
+	ConnConfig  ConnectionConfig  `yaml:"conn_config"`
+	Status      int               `yaml:"status"`
 }
 
 type ParameterConfig struct {
@@ -289,21 +429,21 @@ type StyleConfig struct {
 }
 
 type MetaConfig struct {
-	Protocol   string         `yaml:"protocol"`
+	Protocol   string           `yaml:"protocol"`
 	Capability CapabilityConfig `yaml:"capability"`
 }
 
 type CapabilityConfig struct {
-	FunctionCall   bool     `yaml:"function_call"`
-	InputModal     []string `yaml:"input_modal"`
-	InputTokens    int      `yaml:"input_tokens"`
-	JSONMode       bool     `yaml:"json_mode"`
-	MaxTokens      int      `yaml:"max_tokens"`
-	OutputModal    []string `yaml:"output_modal"`
-	OutputTokens   int      `yaml:"output_tokens"`
-	PrefixCaching  bool     `yaml:"prefix_caching"`
-	Reasoning      bool     `yaml:"reasoning"`
-	PrefillResponse bool    `yaml:"prefill_response"`
+	FunctionCall    bool     `yaml:"function_call"`
+	InputModal      []string `yaml:"input_modal"`
+	InputTokens     int      `yaml:"input_tokens"`
+	JSONMode        bool     `yaml:"json_mode"`
+	MaxTokens       int      `yaml:"max_tokens"`
+	OutputModal     []string `yaml:"output_modal"`
+	OutputTokens    int      `yaml:"output_tokens"`
+	PrefixCaching   bool     `yaml:"prefix_caching"`
+	Reasoning       bool     `yaml:"reasoning"`
+	PrefillResponse bool     `yaml:"prefill_response"`
 }
 
 type ConnectionConfig struct {

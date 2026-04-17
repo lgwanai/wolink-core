@@ -11,6 +11,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -87,6 +88,8 @@ func InitDB(cfg config.DatabaseConfig, poolCfg config.DBPoolConfig) (*gorm.DB, e
 		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
 			cfg.Host, cfg.User, cfg.Password, cfg.DBName, cfg.Port, cfg.SSLMode)
 		dialector = postgres.Open(dsn)
+	case "sqlite":
+		dialector = sqlite.Open(cfg.DBName)
 	default:
 		return nil, fmt.Errorf("unsupported database type: %s", cfg.Type)
 	}

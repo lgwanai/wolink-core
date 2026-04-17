@@ -49,3 +49,11 @@ build/
 # 测试覆盖率报告
 coverage.out
 coverage.html
+# Local test scripts and data
+*.py
+!patch_omlx.py
+output.mp3
+word_timestamps.json
+dump.rdb
+server
+*.test

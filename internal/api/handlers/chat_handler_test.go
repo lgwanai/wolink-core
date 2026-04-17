@@ -30,13 +30,13 @@ func init() {
 
 // mockPlugin is a mock plugin that returns canned responses
 type mockPlugin struct {
-	name      string
-	protocol  string
-	callFunc  func(ctx context.Context, config *models.ModelConfig, request *models.ChatCompletionRequest) (*models.ChatCompletionResponse, error)
+	name       string
+	protocol   string
+	callFunc   func(ctx context.Context, config *models.ModelConfig, request *models.ChatCompletionRequest) (*models.ChatCompletionResponse, error)
 	streamFunc func(ctx context.Context, config *models.ModelConfig, request *models.ChatCompletionRequest) (io.ReadCloser, error)
 }
 
-func (m *mockPlugin) Name() string { return m.name }
+func (m *mockPlugin) Name() string     { return m.name }
 func (m *mockPlugin) Protocol() string { return m.protocol }
 func (m *mockPlugin) Call(ctx context.Context, config *models.ModelConfig, request *models.ChatCompletionRequest) (*models.ChatCompletionResponse, error) {
 	if m.callFunc != nil {
@@ -82,13 +82,13 @@ func setupTestChatHandler(t *testing.T) (*ChatHandler, *gin.Engine, *gorm.DB, fu
 
 	// Create test API key
 	apiKey := &models.APIKey{
-		DepartmentID:   department.ID,
-		KeyID:         "test-key-id",
-		KeySecret:     "test-key-secret",
-		Name:          "Test Key",
-		Status:        "active",
-		DailyLimit:    10000,
-		MonthlyLimit:  300000,
+		DepartmentID:    department.ID,
+		KeyID:           "test-key-id",
+		KeySecret:       "test-key-secret",
+		Name:            "Test Key",
+		Status:          "active",
+		DailyLimit:      10000,
+		MonthlyLimit:    300000,
 		ConcurrentLimit: 10,
 	}
 	require.NoError(t, db.Create(apiKey).Error)
@@ -132,10 +132,10 @@ func setupTestChatHandler(t *testing.T) (*ChatHandler, *gin.Engine, *gorm.DB, fu
 
 	// Create service manager
 	sm := &services.ServiceManager{
-		DB:      db,
-		Redis:   rdb,
-		Logger:  logger,
-		Config:  cfg,
+		DB:     db,
+		Redis:  rdb,
+		Logger: logger,
+		Config: cfg,
 	}
 
 	// Create services manually to avoid config file dependencies
@@ -218,11 +218,11 @@ func TestChatCompletions_NoModelsAvailable(t *testing.T) {
 	require.NoError(t, db.Create(department).Error)
 
 	emptyAPIKey := &models.APIKey{
-		DepartmentID:   department.ID,
-		KeyID:         "empty-key-id",
-		KeySecret:     "empty-key-secret",
-		Name:          "Empty Key",
-		Status:        "active",
+		DepartmentID: department.ID,
+		KeyID:        "empty-key-id",
+		KeySecret:    "empty-key-secret",
+		Name:         "Empty Key",
+		Status:       "active",
 	}
 	require.NoError(t, db.Create(emptyAPIKey).Error)
 
@@ -241,10 +241,10 @@ func TestChatCompletions_NoModelsAvailable(t *testing.T) {
 
 	// Create service manager with empty API key
 	sm := &services.ServiceManager{
-		DB:      db,
-		Redis:   rdb,
-		Logger:  logger,
-		Config:  cfg,
+		DB:     db,
+		Redis:  rdb,
+		Logger: logger,
+		Config: cfg,
 	}
 	sm.ModelConfigService = services.NewModelConfigService(db, rdb, logger, cfg)
 
@@ -345,12 +345,14 @@ func TestEmbeddings_Authorized(t *testing.T) {
 	_, router, _, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
-	req, _ := http.NewRequest(http.MethodPost, "/v1/embeddings", bytes.NewBuffer([]byte("{}")))
+	reqBody := `{"model": "", "input": "hello"}`
+	req, _ := http.NewRequest(http.MethodPost, "/v1/embeddings", bytes.NewBuffer([]byte(reqBody)))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-API-Key", "test-key-id")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
+	t.Logf("Response body: %s", w.Body.String())
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 

@@ -34,7 +34,10 @@
       "Bash([ -f \"/Users/wuliang/workspace/wolink-core/internal/utils/logger.go\" ])",
       "Bash([ -f \"/Users/wuliang/workspace/wolink-core/internal/api/routes_test.go\" ])",
       "Bash(cat /Users/wuliang/workspace/wolink-core/.planning/phases/04-testing-validation/*-CONTEXT.md)",
-      "Bash(grep -l \"func Benchmark\" /Users/wuliang/workspace/wolink-core/**/*.go)"
+      "Bash(grep -l \"func Benchmark\" /Users/wuliang/workspace/wolink-core/**/*.go)",
+      "Bash(go vet:*)",
+      "Bash(go doc:*)",
+      "Bash(git push:*)"
     ]
   }
 }
