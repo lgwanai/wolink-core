@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: complete
-stopped_at: Phase 4 Testing & Validation Complete
-last_updated: "2026-04-05T23:20:00.000Z"
-last_activity: 2026-04-05 - Testing & Validation Phase Complete
+stopped_at: Phase 5 Admin Auth Refactor Complete
+last_updated: "2026-04-25T23:30:00.000Z"
+last_activity: 2026-04-25 - Phase 5 Execution Complete
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 16
-  completed_plans: 16
+  completed_phases: 5
+  total_plans: 20
+  completed_plans: 20
   percent: 100
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Phase: 4 of 4 (Testing & Validation)
+Phase: 5 of 5 (Admin Auth Refactor)
 Status: Complete
-Last activity: 2026-04-05 - Testing & Validation Phase Complete
+Last activity: 2026-04-25 - Phase 5 Execution Complete
 
 Progress: [==========] 100%
 
@@ -61,10 +61,16 @@ Progress: [==========] 100%
 - **04-03:** Performance Benchmarks - COMPLETE
 - **04-04:** Graceful Shutdown Tests - COMPLETE
 
+### Phase 5 Complete
+- **05-01:** AdminConfig & Model Cleanup - COMPLETE (Add AdminConfig, remove Department/AdminUser/AdminSession)
+- **05-02:** NodeService Creation - COMPLETE (Create NodeService, delete AdminAuthService)
+- **05-03:** AdminTokenAuth & Routes - COMPLETE (AdminTokenAuth middleware, NodeHandler, routes update)
+- **05-04:** Migration & Finalization - COMPLETE (Migration script, tests, docs)
+
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16 (Phase 1: 5, Phase 2: 5, Phase 3: 4, Phase 4: 4)
+- Total plans completed: 20 (Phase 1: 5, Phase 2: 5, Phase 3: 4, Phase 4: 4, Phase 5: 4)
 - Average duration: ~10 min
 - Total execution time: 3 hours
 
@@ -76,6 +82,7 @@ Progress: [==========] 100%
 | 2. Infrastructure Hardening | 5/5 | 5 | Complete |
 | 3. Observability | 4/4 | 4 | Complete |
 | 4. Testing & Validation | 4/4 | 4 | Complete |
+| 5. Admin Auth Refactor | 4/4 | 4 | Complete |
 
 ## Test Coverage Summary
 
@@ -117,17 +124,20 @@ Progress: [==========] 100%
 16. **JSON logging:** ISO 8601 timestamp format for consistent log parsing
 17. **Mock infrastructure:** miniredis for Redis, sqlmock for DB, custom MockPlugin for plugins
 18. **Benchmarks:** Cache hit ~30us, OpenAI call overhead ~57us with mock server
+19. **Admin auth refactor:** Static token (X-Admin-Token header) replaces JWT-based auth, simplifying gateway to core responsibilities
+20. **Gateway scope:** wolink-core focuses on gateway functionality; admin/department/user management moved to external admin service
 
 ### Completed Items
 
 - [x] Complete Phase 4 plans (04-01 to 04-04)
+- [x] Complete Phase 5 plans (05-01 to 05-04) - Admin token auth refactor
 
 ### Blockers/Concerns
 
-None. All phases complete.
+None. All 5 phases complete.
 
 ## Session Continuity
 
-Last session: 2026-04-05T23:20:00Z
-Stopped at: Phase 4 Testing & Validation Complete
-Status: All 4 phases complete. Project ready for production deployment.
+Last session: 2026-04-25T23:30:00Z
+Stopped at: Phase 5 Admin Auth Refactor Complete
+Status: All 5 phases complete. Project ready for production deployment with simplified admin auth.
