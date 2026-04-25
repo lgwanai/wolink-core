@@ -15,7 +15,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Security Foundation** - Configuration validation, JWT enforcement, CORS hardening, input validation
 - [x] **Phase 2: Infrastructure Hardening** - Graceful shutdown, health endpoints, connection pooling, timeouts
 - [x] **Phase 3: Observability** - Request tracing, structured logging, Prometheus metrics, error standardization
-- [ ] **Phase 4: Testing & Validation** - Unit tests, integration tests, benchmarks, shutdown tests
+- [x] **Phase 4: Testing & Validation** - Unit tests, integration tests, benchmarks, shutdown tests
+- [x] **Phase 5: Admin Auth Refactor** - Remove admin auth, department management; add token-based admin API
 
 ## Phase Details
 
@@ -87,10 +88,10 @@ Plans:
 **Plans**: 4 plans in 2 waves
 
 Plans:
-- [ ] 04-01: Unit tests for services (TEST-01) - Wave 1
-- [ ] 04-02: Integration tests for handlers and plugins (TEST-02) - Wave 1
-- [ ] 04-03: Performance benchmarks (TEST-03) - Wave 2
-- [ ] 04-04: Graceful shutdown tests (TEST-04) - Wave 2
+- [x] 04-01: Unit tests for services (TEST-01) - Wave 1
+- [x] 04-02: Integration tests for handlers and plugins (TEST-02) - Wave 1
+- [x] 04-03: Performance benchmarks (TEST-03) - Wave 2
+- [x] 04-04: Graceful shutdown tests (TEST-04) - Wave 2
 
 ## Progress
 
@@ -102,7 +103,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. Security Foundation | 5/5 | Complete | 2026-04-05 |
 | 2. Infrastructure Hardening | 5/5 | Complete | 2026-04-05 |
 | 3. Observability | 6/6 | Complete | 2026-04-05 |
-| 4. Testing & Validation | 0/4 | Not started | - |
+| 4. Testing & Validation | 4/4 | Complete | 2026-04-05 |
+| 5. Admin Auth Refactor | 4/4 | Complete | 2026-04-25 |
 
 ### Phase 5: wolink-core 网关核心化重构
 
@@ -112,7 +114,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 **Plans:** 4 plans in 4 waves
 
 Plans:
-- [ ] 05-01: Configuration and Models - Add AdminConfig, remove Department/AdminUser/AdminSession models
-- [ ] 05-02: Services Layer - Create NodeService, delete AdminAuthService, update AuthService
-- [ ] 05-03: Handlers and Routes - Create AdminTokenAuth middleware, NodeHandler, update routes
-- [ ] 05-04: Migration and Tests - Database migration script, tests, documentation
+- [x] 05-01: Configuration and Models - Add AdminConfig, remove Department/AdminUser/AdminSession models
+- [x] 05-02: Services Layer - Create NodeService, delete AdminAuthService, update AuthService
+- [x] 05-03: Handlers and Routes - Create AdminTokenAuth middleware, NodeHandler, update routes
+- [x] 05-04: Migration and Tests - Database migration script, tests, documentation
