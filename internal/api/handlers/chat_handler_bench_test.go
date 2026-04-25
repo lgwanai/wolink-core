@@ -31,19 +31,12 @@ func setupBenchmarkChatHandler() (*ChatHandler, *gin.Engine, func()) {
 	}
 
 	// Auto migrate
-	if err := db.AutoMigrate(&models.Department{}, &models.APIKey{}, &models.ModelRegistry{}, &models.APIKeyModelMapping{}); err != nil {
-		panic(err)
-	}
-
-	// Create test department
-	department := &models.Department{Name: "Bench Dept"}
-	if err := db.Create(department).Error; err != nil {
+	if err := db.AutoMigrate(&models.APIKey{}, &models.ModelRegistry{}, &models.APIKeyModelMapping{}); err != nil {
 		panic(err)
 	}
 
 	// Create test API key
 	apiKey := &models.APIKey{
-		DepartmentID:     department.ID,
 		KeyID:            "bench-key-id",
 		KeySecret:        "bench-key-secret",
 		Name:             "Bench Key",

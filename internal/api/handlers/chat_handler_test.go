@@ -73,16 +73,11 @@ func setupTestChatHandler(t *testing.T) (*ChatHandler, *gin.Engine, *gorm.DB, fu
 	require.NoError(t, err)
 
 	// Auto migrate
-	err = db.AutoMigrate(&models.Department{}, &models.APIKey{}, &models.ModelRegistry{}, &models.APIKeyModelMapping{})
+	err = db.AutoMigrate(&models.APIKey{}, &models.ModelRegistry{}, &models.APIKeyModelMapping{})
 	require.NoError(t, err)
-
-	// Create test department
-	department := &models.Department{Name: "Test Dept"}
-	require.NoError(t, db.Create(department).Error)
 
 	// Create test API key
 	apiKey := &models.APIKey{
-		DepartmentID:    department.ID,
 		KeyID:           "test-key-id",
 		KeySecret:       "test-key-secret",
 		Name:            "Test Key",
@@ -214,11 +209,7 @@ func TestChatCompletions_NoModelsAvailable(t *testing.T) {
 	defer cleanup()
 
 	// Create a new API key without model mappings
-	department := &models.Department{Name: "Empty Dept"}
-	require.NoError(t, db.Create(department).Error)
-
 	emptyAPIKey := &models.APIKey{
-		DepartmentID: department.ID,
 		KeyID:        "empty-key-id",
 		KeySecret:    "empty-key-secret",
 		Name:         "Empty Key",

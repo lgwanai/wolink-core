@@ -14,9 +14,7 @@ type ServiceManager struct {
 	Logger *logrus.Logger
 	Config *config.Config
 
-	// 服务实例
 	AuthService         *AuthService
-	AdminAuthService    *AdminAuthService
 	ModelService        *ModelService
 	ModelConfigService  *ModelConfigService
 	ConversationService *ConversationService
@@ -24,6 +22,8 @@ type ServiceManager struct {
 	UsageService        *UsageService
 	PluginService       *PluginService
 	QueueService        *QueueService
+	CommunicationLogger *CommunicationLogger
+	NodeService         *NodeService
 }
 
 func NewServiceManager(db *gorm.DB, rdb *redis.Client, logger *logrus.Logger, cfg *config.Config) *ServiceManager {
@@ -34,9 +34,7 @@ func NewServiceManager(db *gorm.DB, rdb *redis.Client, logger *logrus.Logger, cf
 		Config: cfg,
 	}
 
-	// 初始化各个服务
 	sm.AuthService = NewAuthService(db, rdb, logger, cfg)
-	sm.AdminAuthService = NewAdminAuthService(db, logger, cfg)
 	sm.ModelService = NewModelService(db, rdb, logger, cfg)
 	sm.ModelConfigService = NewModelConfigService(db, rdb, logger, cfg)
 	sm.ConversationService = NewConversationService(db, rdb, logger, cfg)
@@ -44,7 +42,16 @@ func NewServiceManager(db *gorm.DB, rdb *redis.Client, logger *logrus.Logger, cf
 	sm.UsageService = NewUsageService(db, rdb, logger)
 	sm.PluginService = NewPluginService(logger, cfg)
 	sm.QueueService = NewQueueService(db, rdb, logger, cfg)
-	
+	sm.NodeService = NewNodeService(cfg, logger, "dev")
+
+	// Initialize communication logger
+	sm.CommunicationLogger = NewCommunicationLogger(
+		&cfg.CommunicationLog,
+		rdb,
+		logger.Infof,
+		logger.Errorf,
+	)
+
 	// 加载模型配置
 	if err := sm.ModelConfigService.LoadModelConfigs(); err != nil {
 		logger.Errorf("Failed to load model configs: %v", err)
@@ -60,5 +67,8 @@ func (sm *ServiceManager) Stop() {
 	}
 	if sm.PluginService != nil {
 		sm.PluginService.Stop()
+	}
+	if sm.CommunicationLogger != nil {
+		sm.CommunicationLogger.Close()
 	}
 }

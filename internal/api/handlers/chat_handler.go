@@ -20,12 +20,14 @@ import (
 type ChatHandler struct {
 	serviceManager *services.ServiceManager
 	logger         *logrus.Logger
+	commLogger     *services.CommunicationLogger
 }
 
 func NewChatHandler(sm *services.ServiceManager, logger *logrus.Logger) *ChatHandler {
 	return &ChatHandler{
 		serviceManager: sm,
 		logger:         logger,
+		commLogger:     sm.CommunicationLogger,
 	}
 }
 
@@ -135,6 +137,8 @@ func (h *ChatHandler) handleStreamRequest(c *gin.Context, req *models.ChatComple
 	streamBody, err := h.serviceManager.PluginService.CallModelStream(c.Request.Context(), modelConfig, streamReq)
 	if err != nil {
 		h.writeSSEError(c, err.Error())
+		// Log failed request
+		h.logCommunication(req.RawBody, nil, requestID, apiKey, modelConfig, true, startTime, 0, hasSensitive, err.Error())
 		return
 	}
 	defer streamBody.Close()
@@ -193,6 +197,10 @@ func (h *ChatHandler) handleStreamRequest(c *gin.Context, req *models.ChatComple
 	go h.recordConversationAsync(apiKey, modelConfig, messages, fullResponse.String(),
 		requestID, startTime, tokensUsed, hasSensitive, sensitiveTypes)
 
+	// Log communication (non-blocking)
+	responseJSON := h.buildStreamResponseJSON(fullResponse.String(), tokensUsed, modelConfig.Name)
+	h.logCommunication(req.RawBody, responseJSON, requestID, apiKey, modelConfig, true, startTime, tokensUsed, hasSensitive, "")
+
 	// 记录使用量
 	h.serviceManager.AuthService.RecordUsage(apiKey, tokensUsed)
 }
@@ -216,6 +224,8 @@ func (h *ChatHandler) handleNonStreamRequest(c *gin.Context, req *models.ChatCom
 	chatResp, err := h.serviceManager.PluginService.CallModel(c.Request.Context(), modelConfig, nonStreamReq)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// Log failed request
+		h.logCommunication(req.RawBody, nil, requestID, apiKey, modelConfig, false, startTime, 0, hasSensitive, err.Error())
 		return
 	}
 
@@ -228,6 +238,10 @@ func (h *ChatHandler) handleNonStreamRequest(c *gin.Context, req *models.ChatCom
 	go h.recordConversationAsync(apiKey, modelConfig, messages, assistantMessage,
 		requestID, startTime, chatResp.Usage.TotalTokens, hasSensitive, sensitiveTypes)
 
+	// Log communication (non-blocking)
+	responseJSON, _ := json.Marshal(chatResp)
+	h.logCommunication(req.RawBody, responseJSON, requestID, apiKey, modelConfig, false, startTime, chatResp.Usage.TotalTokens, hasSensitive, "")
+
 	// 记录使用量
 	h.serviceManager.AuthService.RecordUsage(apiKey, chatResp.Usage.TotalTokens)
 
@@ -236,6 +250,67 @@ func (h *ChatHandler) handleNonStreamRequest(c *gin.Context, req *models.ChatCom
 }
 
 // 私有方法
+
+// logCommunication logs a communication record (non-blocking)
+func (h *ChatHandler) logCommunication(
+	requestRaw json.RawMessage,
+	responseRaw json.RawMessage,
+	requestID string,
+	apiKey *models.APIKey,
+	modelConfig *models.ModelConfig,
+	isStream bool,
+	startTime time.Time,
+	tokensUsed int,
+	hasSensitive bool,
+	errorMsg string,
+) {
+	if h.commLogger == nil {
+		return
+	}
+
+	duration := time.Since(startTime).Milliseconds()
+
+	record := &services.CommunicationRecord{
+		RequestID:    requestID,
+		APIKeyID:     apiKey.ID,
+		ModelName:    modelConfig.Name,
+		IsStream:     isStream,
+		Request:      requestRaw,
+		Response:     responseRaw,
+		TokensUsed:   tokensUsed,
+		Duration:     duration,
+		HasSensitive: hasSensitive,
+		Error:        errorMsg,
+	}
+
+	// Non-blocking log
+	h.commLogger.Log(record)
+}
+
+// buildStreamResponseJSON builds a JSON response for streaming
+func (h *ChatHandler) buildStreamResponseJSON(fullResponse string, tokensUsed int, modelName string) json.RawMessage {
+	resp := map[string]interface{}{
+		"object": "chat.completion",
+		"model":  modelName,
+		"choices": []map[string]interface{}{
+			{
+				"index": 0,
+				"message": map[string]interface{}{
+					"role":    "assistant",
+					"content": fullResponse,
+				},
+				"finish_reason": "stop",
+			},
+		},
+		"usage": map[string]interface{}{
+			"prompt_tokens":     0,
+			"completion_tokens": tokensUsed,
+			"total_tokens":      tokensUsed,
+		},
+	}
+	jsonData, _ := json.Marshal(resp)
+	return jsonData
+}
 
 func (h *ChatHandler) writeSSEError(c *gin.Context, errorMsg string) {
 	errorData := map[string]interface{}{
@@ -270,7 +345,6 @@ func (h *ChatHandler) recordConversationAsync(apiKey *models.APIKey, modelConfig
 	// 创建conversation任务
 	conversationTask := &services.ConversationTask{
 		APIKeyID:         apiKey.ID,
-		DepartmentID:     apiKey.DepartmentID,
 		ModelName:        modelConfig.Name,
 		RequestID:        requestID,
 		UserMessage:      userMessage,
@@ -293,7 +367,6 @@ func (h *ChatHandler) recordConversationAsync(apiKey *models.APIKey, modelConfig
 	// 同时记录usage_log
 	usageLogTask := &services.UsageLogTask{
 		APIKeyID:     apiKey.ID,
-		DepartmentID: apiKey.DepartmentID,
 		ModelName:    modelConfig.Name,
 		TokensUsed:   tokensUsed,
 		RequestTime:  startTime,
@@ -327,7 +400,6 @@ func (h *ChatHandler) recordConversationDirect(apiKey *models.APIKey, modelConfi
 
 	conversation := &models.Conversation{
 		APIKeyID:         apiKey.ID,
-		DepartmentID:     apiKey.DepartmentID,
 		ModelName:        modelConfig.Name,
 		RequestID:        requestID,
 		UserMessage:      userMessage,

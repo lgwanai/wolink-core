@@ -42,7 +42,6 @@ type QueueTask struct {
 // ConversationTask conversation任务数据
 type ConversationTask struct {
 	APIKeyID         uint      `json:"api_key_id"`
-	DepartmentID     uint      `json:"department_id"`
 	ModelName        string    `json:"model_name"`
 	RequestID        string    `json:"request_id"`
 	UserMessage      string    `json:"user_message"`
@@ -58,7 +57,6 @@ type ConversationTask struct {
 // UsageLogTask usage_log任务数据
 type UsageLogTask struct {
 	APIKeyID     uint      `json:"api_key_id"`
-	DepartmentID uint      `json:"department_id"`
 	ModelName    string    `json:"model_name"`
 	TokensUsed   int       `json:"tokens_used"`
 	RequestTime  time.Time `json:"request_time"`
@@ -246,7 +244,6 @@ func (qs *QueueService) processConversationTask(ctx context.Context) {
 	// 创建conversation记录
 	conversation := &models.Conversation{
 		APIKeyID:         conversationTask.APIKeyID,
-		DepartmentID:     conversationTask.DepartmentID,
 		ModelName:        conversationTask.ModelName,
 		RequestID:        conversationTask.RequestID,
 		UserMessage:      conversationTask.UserMessage,
@@ -314,7 +311,6 @@ func (qs *QueueService) processUsageLogTask(ctx context.Context) {
 	// 创建usage_log记录
 	usageLog := &models.UsageLog{
 		APIKeyID:     usageLogTask.APIKeyID,
-		DepartmentID: usageLogTask.DepartmentID,
 		ModelName:    usageLogTask.ModelName,
 		TokensUsed:   usageLogTask.TokensUsed,
 		RequestTime:  usageLogTask.RequestTime,

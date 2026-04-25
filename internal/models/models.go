@@ -7,24 +7,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// Department 部门表
-type Department struct {
-	ID        uint      `json:"id" gorm:"primaryKey"`
-	Name      string    `json:"name" gorm:"type:varchar(100);uniqueIndex;not null"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-
-	APIKeys []APIKey `json:"api_keys" gorm:"foreignKey:DepartmentID"`
-}
-
-// APIKey 部门API密钥表
+// APIKey API密钥表
 type APIKey struct {
-	ID           uint   `json:"id" gorm:"primaryKey"`
-	DepartmentID uint   `json:"department_id" gorm:"not null"`
-	KeyID        string `json:"key_id" gorm:"type:varchar(100);uniqueIndex;not null"` // 对外显示的key
-	KeySecret    string `json:"-" gorm:"type:varchar(100);not null"`                  // 实际的密钥，不返回给前端
-	Name         string `json:"name" gorm:"type:varchar(100)"`
-	Status       string `json:"status" gorm:"type:varchar(20);default:'active'"` // active, disabled
+	ID        uint   `json:"id" gorm:"primaryKey"`
+	KeyID     string `json:"key_id" gorm:"type:varchar(100);uniqueIndex;not null"`
+	KeySecret string `json:"-" gorm:"type:varchar(100);not null"`
+	Name      string `json:"name" gorm:"type:varchar(100)"`
+	Status    string `json:"status" gorm:"type:varchar(20);default:'active'"` // active, disabled
 
 	// 使用限制
 	DailyLimit      int64 `json:"daily_limit" gorm:"default:10000"`    // 每日调用限制
@@ -38,8 +27,6 @@ type APIKey struct {
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-
-	Department Department `json:"department" gorm:"foreignKey:DepartmentID"`
 }
 
 // ModelRegistry 模型注册表（只存储映射关系）
@@ -89,10 +76,9 @@ type APIKeyModelMapping struct {
 
 // Conversation 对话记录表
 type Conversation struct {
-	ID           string `json:"id" gorm:"type:varchar(50);primaryKey"` // UUID
-	APIKeyID     uint   `json:"api_key_id" gorm:"not null"`
-	DepartmentID uint   `json:"department_id" gorm:"not null"`
-	ModelName    string `json:"model_name" gorm:"type:varchar(100);not null"`
+	ID        string `json:"id" gorm:"type:varchar(50);primaryKey"` // UUID
+	APIKeyID  uint   `json:"api_key_id" gorm:"not null"`
+	ModelName string `json:"model_name" gorm:"type:varchar(100);not null"`
 
 	// 请求信息
 	RequestID    string `json:"request_id" gorm:"type:varchar(50);index"`
@@ -111,15 +97,13 @@ type Conversation struct {
 	CreatedAt time.Time `json:"created_at" gorm:"index"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	APIKey     APIKey     `json:"api_key" gorm:"foreignKey:APIKeyID"`
-	Department Department `json:"department" gorm:"foreignKey:DepartmentID"`
+	APIKey APIKey `json:"api_key" gorm:"foreignKey:APIKeyID"`
 }
 
 // UsageLog 使用日志表（用于异步记录）
 type UsageLog struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
 	APIKeyID     uint      `json:"api_key_id" gorm:"index"`
-	DepartmentID uint      `json:"department_id" gorm:"index"`
 	ModelName    string    `json:"model_name" gorm:"type:varchar(100);index"`
 	TokensUsed   int       `json:"tokens_used"`
 	RequestTime  time.Time `json:"request_time" gorm:"index"`
@@ -128,63 +112,6 @@ type UsageLog struct {
 	ErrorMessage string    `json:"error_message" gorm:"type:text"`
 
 	CreatedAt time.Time `json:"created_at"`
-}
-
-// AdminUser 管理员用户表
-type AdminUser struct {
-	ID       uint   `json:"id" gorm:"primaryKey"`
-	Username string `json:"username" gorm:"type:varchar(50);uniqueIndex;not null"`
-	Password string `json:"-" gorm:"type:varchar(255);not null"` // 密码哈希，不返回给前端
-	Email    string `json:"email" gorm:"type:varchar(100);uniqueIndex"`
-	Name     string `json:"name" gorm:"type:varchar(100)"`
-	Role     string `json:"role" gorm:"type:varchar(20);default:'admin'"`    // admin, super_admin
-	Status   string `json:"status" gorm:"type:varchar(20);default:'active'"` // active, disabled
-
-	// 最后登录信息
-	LastLoginAt *time.Time `json:"last_login_at"`
-	LastLoginIP string     `json:"last_login_ip" gorm:"type:varchar(45)"`
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-// AdminSession 管理员会话表（用于token管理）
-type AdminSession struct {
-	ID        uint      `json:"id" gorm:"primaryKey"`
-	AdminID   uint      `json:"admin_id" gorm:"not null;index"`
-	Token     string    `json:"-" gorm:"type:varchar(500);uniqueIndex;not null"` // JWT token哈希
-	ExpiresAt time.Time `json:"expires_at" gorm:"index"`
-	CreatedAt time.Time `json:"created_at"`
-
-	AdminUser AdminUser `json:"admin_user" gorm:"foreignKey:AdminID"`
-}
-
-// LoginRequest 登录请求结构
-type LoginRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=50"`
-	Password string `json:"password" binding:"required,min=8,max=128"`
-}
-
-// CreateAdminRequest 创建管理员请求结构
-type CreateAdminRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=50,alphanum"`
-	Password string `json:"password" binding:"required,min=8,max=128"`
-	Email    string `json:"email" binding:"required,email"`
-	Name     string `json:"name" binding:"required,min=1,max=100"`
-	Role     string `json:"role" binding:"omitempty,oneof=admin super_admin"`
-}
-
-// ChangePasswordRequest 修改密码请求结构
-type ChangePasswordRequest struct {
-	OldPassword string `json:"old_password" binding:"required,min=8,max=128"`
-	NewPassword string `json:"new_password" binding:"required,min=8,max=128"`
-}
-
-// LoginResponse 登录响应结构
-type LoginResponse struct {
-	Token     string    `json:"token"`
-	ExpiresAt time.Time `json:"expires_at"`
-	User      AdminUser `json:"user"`
 }
 
 // BeforeCreate 在创建对话记录前生成UUID

@@ -45,7 +45,6 @@ func populateAPIKeyCache(mr *miniredis.Miniredis, keyID string, apiKey *models.A
 	cacheKey := fmt.Sprintf("apikey:%s", keyID)
 	mr.HSet(cacheKey,
 		"id", fmt.Sprintf("%d", apiKey.ID),
-		"department_id", fmt.Sprintf("%d", apiKey.DepartmentID),
 		"key_id", apiKey.KeyID,
 		"name", apiKey.Name,
 		"status", apiKey.Status,
@@ -63,7 +62,6 @@ func BenchmarkValidateAPIKey_CacheHit(b *testing.B) {
 	keyID := "ak-benchmark-cache-hit"
 	apiKey := &models.APIKey{
 		ID:              1,
-		DepartmentID:    1,
 		KeyID:           keyID,
 		Name:            "benchmark-key",
 		Status:          "active",
@@ -96,7 +94,6 @@ func BenchmarkValidateAPIKey_Parallel(b *testing.B) {
 	keyID := "ak-benchmark-parallel"
 	apiKey := &models.APIKey{
 		ID:              1,
-		DepartmentID:    1,
 		KeyID:           keyID,
 		Name:            "benchmark-key",
 		Status:          "active",

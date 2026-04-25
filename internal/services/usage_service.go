@@ -23,26 +23,37 @@ func NewUsageService(db *gorm.DB, redis *redis.Client, logger *logrus.Logger) *U
 }
 
 // GetUsageStats 获取使用统计
-func (s *UsageService) GetUsageStats(departmentID uint) (map[string]interface{}, error) {
+func (s *UsageService) GetUsageStats(apiKeyID uint, limit int) (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
-	
+
+	query := s.db.Model(&models.Conversation{})
+	if apiKeyID > 0 {
+		query = query.Where("api_key_id = ?", apiKeyID)
+	}
+
 	// 获取总调用次数
 	var totalCalls int64
-	s.db.Model(&models.Conversation{}).Where("department_id = ?", departmentID).Count(&totalCalls)
+	query.Count(&totalCalls)
 	stats["total_calls"] = totalCalls
-	
+
 	// 获取总token使用量
 	var totalTokens int64
-	s.db.Model(&models.Conversation{}).Where("department_id = ?", departmentID).
-		Select("COALESCE(SUM(tokens_used), 0)").Scan(&totalTokens)
+	tokenQuery := s.db.Model(&models.Conversation{})
+	if apiKeyID > 0 {
+		tokenQuery = tokenQuery.Where("api_key_id = ?", apiKeyID)
+	}
+	tokenQuery.Select("COALESCE(SUM(tokens_used), 0)").Scan(&totalTokens)
 	stats["total_tokens"] = totalTokens
-	
+
 	// 获取平均响应时间
 	var avgResponseTime float64
-	s.db.Model(&models.Conversation{}).Where("department_id = ?", departmentID).
-		Select("COALESCE(AVG(response_time), 0)").Scan(&avgResponseTime)
+	avgQuery := s.db.Model(&models.Conversation{})
+	if apiKeyID > 0 {
+		avgQuery = avgQuery.Where("api_key_id = ?", apiKeyID)
+	}
+	avgQuery.Select("COALESCE(AVG(response_time), 0)").Scan(&avgResponseTime)
 	stats["avg_response_time"] = avgResponseTime
-	
+
 	return stats, nil
 }
 

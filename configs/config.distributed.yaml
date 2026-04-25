@@ -1,0 +1,94 @@
+# WoLink Core 多节点部署配置示例
+# 所有节点使用相同的配置，通过环境变量区分
+
+server:
+  port: "8080"
+  mode: "release"
+
+# 节点配置 - 每个节点通过环境变量HOSTNAME自动获取唯一ID
+node:
+  id: "${HOSTNAME}"  # 自动使用主机名作为节点ID
+  region: "cn-east-1"  # 区域标识，可按需修改
+
+# 数据库配置 - 所有节点共享
+database:
+  type: "postgres"
+  host: "localhost"
+  port: 5432
+  user: "wuliang"
+  password: "lingting"
+  dbname: "wolink_core"
+  sslmode: "disable"
+
+# Redis配置 - 所有节点共享
+redis:
+  host: "redis-cluster.internal"  # Redis集群地址
+  port: 6379
+  password: "${REDIS_PASSWORD}"  # 从环境变量读取
+  db: 0
+
+# 日志配置
+log:
+  level: "info"  # 生产环境建议用 info 或 warn
+
+# 安全配置
+security:
+  jwt_secret: "${JWT_SECRET}"  # 从环境变量读取
+  sensitive_patterns:
+    - '\d{11}'           # 手机号
+    - '\d{18}|\d{15}'    # 身份证号
+    - '\d{16}'           # 银行卡号
+  replacement_patterns:
+    - "[PHONE]"
+    - "[ID_CARD]"
+    - "[BANK_CARD]"
+
+# 模型配置
+models:
+  config_path: "./configs/models"
+
+# 通信日志配置 - 支持分布式
+communication_log:
+  enabled: true
+  mode: "local"  # local: 每个节点写本地文件
+                 # shared: 使用共享存储（NFS等）
+  
+  # 本地存储路径
+  storage_path: "./logs/communications"
+  
+  # 启用Redis同步（推荐多节点部署时开启）
+  # 开启后，日志会同时写入Redis队列，可被集中收集器消费
+  enable_remote_sync: true
+  redis_queue_key: "wolink:comm_logs"
+  
+  # 文件大小和刷新间隔
+  max_file_size_mb: 100
+  flush_interval_ms: 1000  # 1秒刷新一次
+
+# 基础设施配置 - 多节点需要调整连接池
+infrastructure:
+  # 优雅关闭超时
+  shutdown_timeout: "30s"
+  
+  # HTTP服务器超时
+  read_timeout: "15s"
+  write_timeout: "30s"
+  idle_timeout: "120s"
+  read_header_timeout: "5s"
+  
+  # 数据库连接池
+  # 注意：总连接数 = 节点数 × max_open_conns
+  # 例如：3节点 × 50连接 = 150总连接
+  database_pool:
+    max_open_conns: 50      # 单节点最大连接数
+    max_idle_conns: 20      # 单节点空闲连接数
+    conn_max_lifetime: "5m" # 连接最大存活时间
+    conn_max_idle_time: "2m" # 空闲连接最大存活时间
+  
+  # Redis连接池
+  # 注意：总连接数 = 节点数 × pool_size
+  redis_pool:
+    pool_size: 50           # 单节点连接池大小
+    min_idle_conns: 10      # 单节点最小空闲连接
+    conn_max_lifetime: "5m" # 连接最大存活时间
+    pool_timeout: "30s"     # 获取连接超时时间

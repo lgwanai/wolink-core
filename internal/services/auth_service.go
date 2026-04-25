@@ -46,9 +46,6 @@ func (s *AuthService) ValidateAPIKey(keyID string) (*models.APIKey, error) {
 		if id, err := strconv.ParseUint(cached.Val()["id"], 10, 32); err == nil {
 			apiKey.ID = uint(id)
 		}
-		if deptID, err := strconv.ParseUint(cached.Val()["department_id"], 10, 32); err == nil {
-			apiKey.DepartmentID = uint(deptID)
-		}
 		apiKey.KeyID = cached.Val()["key_id"]
 		apiKey.Name = cached.Val()["name"]
 		apiKey.Status = cached.Val()["status"]
@@ -71,7 +68,7 @@ func (s *AuthService) ValidateAPIKey(keyID string) (*models.APIKey, error) {
 	
 	// 缓存中没有，从数据库查询
 	var apiKey models.APIKey
-	if err := s.db.Preload("Department").Where("key_id = ? AND status = ?", keyID, "active").First(&apiKey).Error; err != nil {
+	if err := s.db.Where("key_id = ? AND status = ?", keyID, "active").First(&apiKey).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, fmt.Errorf("invalid API key")
 		}
@@ -149,28 +146,24 @@ func (s *AuthService) RecordUsage(apiKey *models.APIKey, tokensUsed int) {
 }
 
 // GenerateAPIKey 生成新的API密钥
-func (s *AuthService) GenerateAPIKey(departmentID uint, name string) (*models.APIKey, error) {
+func (s *AuthService) GenerateAPIKey(name string) (*models.APIKey, error) {
 	// 生成密钥ID和密钥
 	keyID := s.generateKeyID()
 	keySecret := s.generateKeySecret()
 	
 	apiKey := &models.APIKey{
-		DepartmentID: departmentID,
-		KeyID:        keyID,
-		KeySecret:    keySecret,
-		Name:         name,
-		Status:       "active",
-		DailyLimit:   10000,
-		MonthlyLimit: 300000,
+		KeyID:           keyID,
+		KeySecret:       keySecret,
+		Name:            name,
+		Status:          "active",
+		DailyLimit:      10000,
+		MonthlyLimit:    300000,
 		ConcurrentLimit: 10,
 	}
 	
 	if err := s.db.Create(apiKey).Error; err != nil {
 		return nil, fmt.Errorf("failed to create API key: %w", err)
 	}
-	
-	// 预加载部门信息
-	s.db.Preload("Department").First(apiKey, apiKey.ID)
 	
 	// 缓存新的API密钥
 	s.cacheAPIKey(apiKey, 24*time.Hour)
@@ -186,12 +179,11 @@ func (s *AuthService) cacheAPIKey(apiKey *models.APIKey, duration time.Duration)
 	
 	data := map[string]interface{}{
 		"id":               apiKey.ID,
-		"department_id":    apiKey.DepartmentID,
-		"key_id":          apiKey.KeyID,
-		"name":            apiKey.Name,
-		"status":          apiKey.Status,
-		"daily_limit":     apiKey.DailyLimit,
-		"monthly_limit":   apiKey.MonthlyLimit,
+		"key_id":           apiKey.KeyID,
+		"name":             apiKey.Name,
+		"status":           apiKey.Status,
+		"daily_limit":      apiKey.DailyLimit,
+		"monthly_limit":    apiKey.MonthlyLimit,
 		"concurrent_limit": apiKey.ConcurrentLimit,
 	}
 	

@@ -108,7 +108,6 @@ func InitDB(cfg config.DatabaseConfig, poolCfg config.DBPoolConfig) (*gorm.DB, e
 
 	// 自动迁移
 	if err := db.AutoMigrate(
-		&models.Department{},
 		&models.APIKey{},
 		&models.ModelRegistry{},
 		&models.APIKeyModelMapping{},
