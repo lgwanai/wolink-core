@@ -118,3 +118,12 @@ Plans:
 - [x] 05-02: Services Layer - Create NodeService, delete AdminAuthService, update AuthService
 - [x] 05-03: Handlers and Routes - Create AdminTokenAuth middleware, NodeHandler, update routes
 - [x] 05-04: Migration and Tests - Database migration script, tests, documentation
+
+### Phase 6: 去掉数据库连接相关的业务逻辑，网关不要直接访问数据库，完全使用admin来控制，提供接口
+
+**Goal:** [To be planned]
+**Depends on:** Phase 5
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 6 to break down)
