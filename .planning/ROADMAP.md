@@ -103,3 +103,16 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 2. Infrastructure Hardening | 5/5 | Complete | 2026-04-05 |
 | 3. Observability | 6/6 | Complete | 2026-04-05 |
 | 4. Testing & Validation | 0/4 | Not started | - |
+
+### Phase 5: wolink-core 网关核心化重构
+
+**Goal:** Transform wolink-core into a pure gateway by removing admin authentication, department management, and adding admin management API with token authentication for external admin system communication.
+**Depends on:** Phase 4
+**Requirements:** ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05
+**Plans:** 4 plans in 4 waves
+
+Plans:
+- [ ] 05-01: Configuration and Models - Add AdminConfig, remove Department/AdminUser/AdminSession models
+- [ ] 05-02: Services Layer - Create NodeService, delete AdminAuthService, update AuthService
+- [ ] 05-03: Handlers and Routes - Create AdminTokenAuth middleware, NodeHandler, update routes
+- [ ] 05-04: Migration and Tests - Database migration script, tests, documentation
