@@ -24,6 +24,7 @@ type ServiceManager struct {
 	QueueService        *QueueService
 	CommunicationLogger *CommunicationLogger
 	NodeService         *NodeService
+	KafkaProducer       *KafkaProducer
 }
 
 func NewServiceManager(db *gorm.DB, rdb *redis.Client, logger *logrus.Logger, cfg *config.Config) *ServiceManager {
@@ -42,7 +43,7 @@ func NewServiceManager(db *gorm.DB, rdb *redis.Client, logger *logrus.Logger, cf
 	sm.UsageService = NewUsageService(db, rdb, logger)
 	sm.PluginService = NewPluginService(logger, cfg)
 	sm.QueueService = NewQueueService(db, rdb, logger, cfg)
-	sm.NodeService = NewNodeService(cfg, logger, "dev")
+	sm.NodeService = NewNodeService(cfg, logger, "dev", db, rdb)
 
 	// Initialize communication logger
 	sm.CommunicationLogger = NewCommunicationLogger(
@@ -51,6 +52,13 @@ func NewServiceManager(db *gorm.DB, rdb *redis.Client, logger *logrus.Logger, cf
 		logger.Infof,
 		logger.Errorf,
 	)
+
+	// Initialize Kafka producer for async log streaming
+	kafkaProducer, err := NewKafkaProducer(cfg, logger)
+	if err != nil {
+		logger.Errorf("Failed to initialize Kafka producer: %v", err)
+	}
+	sm.KafkaProducer = kafkaProducer
 
 	// 加载模型配置
 	if err := sm.ModelConfigService.LoadModelConfigs(); err != nil {
@@ -62,6 +70,9 @@ func NewServiceManager(db *gorm.DB, rdb *redis.Client, logger *logrus.Logger, cf
 
 // Stop 停止所有服务
 func (sm *ServiceManager) Stop() {
+	if sm.KafkaProducer != nil {
+		sm.KafkaProducer.Close()
+	}
 	if sm.QueueService != nil {
 		sm.QueueService.Stop()
 	}
