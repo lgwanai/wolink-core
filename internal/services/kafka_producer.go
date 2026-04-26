@@ -33,7 +33,19 @@ type GatewayLog struct {
 	PromptContent string    `json:"prompt_content,omitempty"` // Masked prompt (PII removed)
 }
 
-// KafkaProducer publishes gateway logs to Kafka asynchronously
+// SecurityEvent represents a security event for the security-events Kafka topic
+type SecurityEvent struct {
+	EventID   string    `json:"event_id"`
+	EventType string    `json:"event_type"` // pii_detected, rule_violation, blocked, etc.
+	RiskLevel string    `json:"risk_level"` // high, medium, low
+	UserID    string    `json:"user_id"`
+	IP        string    `json:"ip"`
+	RuleID    string    `json:"rule_id,omitempty"`
+	Prompt    string    `json:"prompt"` // Masked prompt
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// KafkaProducer publishes gateway logs and security events to Kafka asynchronously
 type KafkaProducer struct {
 	producer sarama.AsyncProducer
 	topic    string
@@ -115,6 +127,46 @@ func (kp *KafkaProducer) PublishLog(ctx context.Context, log *GatewayLog) error 
 	}
 }
 
+// PublishSecurityEvent publishes a security event to the security-events topic asynchronously
+// Errors are logged but do NOT block or fail the request
+func (kp *KafkaProducer) PublishSecurityEvent(ctx context.Context, event *SecurityEvent) error {
+	if kp == nil || kp.producer == nil {
+		return nil // Silently skip if producer not initialized
+	}
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		kp.logger.WithError(err).Error("Failed to marshal security event")
+		return fmt.Errorf("failed to marshal security event: %w", err)
+	}
+
+	msg := &sarama.ProducerMessage{
+		Topic: "security-events",
+		Key:   sarama.StringEncoder(event.EventID),
+		Value: sarama.ByteEncoder(data),
+	}
+
+	kp.wg.Add(1)
+
+	select {
+	case kp.producer.Input() <- msg:
+		// Message queued successfully
+		kp.logger.WithFields(logrus.Fields{
+			"event_id":   event.EventID,
+			"event_type": event.EventType,
+			"risk_level": event.RiskLevel,
+			"user_id":    event.UserID,
+		}).Info("Security event published to Kafka")
+		return nil
+	case <-ctx.Done():
+		kp.wg.Done()
+		return fmt.Errorf("context cancelled while publishing security event")
+	case <-kp.stopCh:
+		kp.wg.Done()
+		return fmt.Errorf("producer shutting down")
+	}
+}
+
 // handleResponses processes async producer successes and errors
 func (kp *KafkaProducer) handleResponses() {
 	for {
@@ -127,7 +179,7 @@ func (kp *KafkaProducer) handleResponses() {
 			}
 			kp.wg.Done()
 			if err != nil {
-				kp.logger.WithError(err.Err).WithField("topic", err.Msg.Topic).Error("Failed to publish log to Kafka")
+				kp.logger.WithError(err.Err).WithField("topic", err.Msg.Topic).Error("Failed to publish to Kafka")
 			}
 		case _, ok := <-kp.producer.Successes():
 			if !ok {
