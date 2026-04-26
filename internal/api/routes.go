@@ -37,6 +37,8 @@ func SetupRoutes(serviceManager *services.ServiceManager, logger *logrus.Logger,
 	v1 := router.Group("/v1")
 	{
 		v1.Use(middleware.APIKeyAuth(serviceManager.AuthService))
+		// Quota middleware checks after auth, before handler
+		v1.Use(middleware.QuotaMiddleware(serviceManager.QuotaChecker))
 
 		v1.POST("/chat/completions", chatHandler.ChatCompletions)
 		v1.POST("/messages", chatHandler.Messages)

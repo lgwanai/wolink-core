@@ -25,6 +25,7 @@ type ServiceManager struct {
 	CommunicationLogger *CommunicationLogger
 	NodeService         *NodeService
 	KafkaProducer       *KafkaProducer
+	QuotaChecker        *QuotaChecker
 }
 
 func NewServiceManager(db *gorm.DB, rdb *redis.Client, logger *logrus.Logger, cfg *config.Config) *ServiceManager {
@@ -59,6 +60,10 @@ func NewServiceManager(db *gorm.DB, rdb *redis.Client, logger *logrus.Logger, cf
 		logger.Errorf("Failed to initialize Kafka producer: %v", err)
 	}
 	sm.KafkaProducer = kafkaProducer
+
+	// Initialize QuotaChecker for quota enforcement
+	sm.QuotaChecker = NewQuotaChecker(rdb, logger, cfg)
+	logger.Info("QuotaChecker initialized")
 
 	// 加载模型配置
 	if err := sm.ModelConfigService.LoadModelConfigs(); err != nil {

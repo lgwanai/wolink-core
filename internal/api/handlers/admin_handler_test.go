@@ -50,7 +50,7 @@ func setupTestAdminHandler(t *testing.T) (*AdminHandler, *gin.Engine, *gorm.DB, 
 	sm.AuthService = services.NewAuthService(db, rdb, logger, cfg)
 	sm.UsageService = services.NewUsageService(db, rdb, logger)
 	sm.ConversationService = services.NewConversationService(db, rdb, logger, cfg)
-	sm.NodeService = services.NewNodeService(cfg, logger, "test")
+	sm.NodeService = services.NewNodeService(cfg, logger, "test", db, rdb)
 
 	handler := NewAdminHandler(sm, logger)
 
