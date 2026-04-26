@@ -18,6 +18,14 @@ type Config struct {
 	CommunicationLog CommunicationLogConfig `mapstructure:"communication_log"`
 	Node             NodeConfig             `mapstructure:"node"`
 	Admin            AdminConfig            `mapstructure:"admin"`
+	Kafka            KafkaConfig            `mapstructure:"kafka"`
+}
+
+// KafkaConfig holds Kafka producer configuration for async log streaming
+type KafkaConfig struct {
+	Brokers []string `mapstructure:"brokers"`
+	Topic   string   `mapstructure:"topic"`
+	Enabled bool     `mapstructure:"enabled"`
 }
 
 // AdminConfig holds admin API authentication settings
@@ -207,4 +215,9 @@ func setDefaults() {
 
 	// Admin defaults
 	viper.SetDefault("admin.token", "")
+
+	// Kafka defaults
+	viper.SetDefault("kafka.brokers", []string{"localhost:9092"})
+	viper.SetDefault("kafka.topic", "gateway-logs")
+	viper.SetDefault("kafka.enabled", false)
 }

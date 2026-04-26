@@ -69,13 +69,13 @@ communication_log:
 infrastructure:
   # 优雅关闭超时
   shutdown_timeout: "30s"
-  
+
   # HTTP服务器超时
   read_timeout: "15s"
   write_timeout: "30s"
   idle_timeout: "120s"
   read_header_timeout: "5s"
-  
+
   # 数据库连接池
   # 注意：总连接数 = 节点数 × max_open_conns
   # 例如：3节点 × 50连接 = 150总连接
@@ -84,7 +84,7 @@ infrastructure:
     max_idle_conns: 20      # 单节点空闲连接数
     conn_max_lifetime: "5m" # 连接最大存活时间
     conn_max_idle_time: "2m" # 空闲连接最大存活时间
-  
+
   # Redis连接池
   # 注意：总连接数 = 节点数 × pool_size
   redis_pool:
@@ -92,3 +92,10 @@ infrastructure:
     min_idle_conns: 10      # 单节点最小空闲连接
     conn_max_lifetime: "5m" # 连接最大存活时间
     pool_timeout: "30s"     # 获取连接超时时间
+
+# Kafka配置 - 用于异步日志流
+kafka:
+  brokers:
+    - "kafka-cluster.internal:9092"  # Kafka集群地址
+  topic: "gateway-logs"              # 日志主题
+  enabled: true                      # 生产环境建议开启
