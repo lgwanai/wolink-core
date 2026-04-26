@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -139,6 +141,10 @@ func (h *ChatHandler) handleStreamRequest(c *gin.Context, req *models.ChatComple
 		h.writeSSEError(c, err.Error())
 		// Log failed request
 		h.logCommunication(req.RawBody, nil, requestID, apiKey, modelConfig, true, startTime, 0, hasSensitive, err.Error())
+		// Publish Kafka log for failed stream request
+		responseTime := time.Since(startTime).Milliseconds()
+		maskedPrompt := h.extractUserMessage(messages)
+		h.publishKafkaLog(c, requestID, apiKey, modelConfig, 0, 0, responseTime, "error", maskedPrompt)
 		return
 	}
 	defer streamBody.Close()
@@ -203,6 +209,11 @@ func (h *ChatHandler) handleStreamRequest(c *gin.Context, req *models.ChatComple
 
 	// 记录使用量
 	h.serviceManager.AuthService.RecordUsage(apiKey, tokensUsed)
+
+	// Publish Kafka log for successful stream request
+	responseTime := time.Since(startTime).Milliseconds()
+	maskedPrompt := h.extractUserMessage(messages)
+	h.publishKafkaLog(c, requestID, apiKey, modelConfig, 0, tokensUsed, responseTime, "success", maskedPrompt)
 }
 
 // handleNonStreamRequest 处理非流式请求
@@ -226,6 +237,10 @@ func (h *ChatHandler) handleNonStreamRequest(c *gin.Context, req *models.ChatCom
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		// Log failed request
 		h.logCommunication(req.RawBody, nil, requestID, apiKey, modelConfig, false, startTime, 0, hasSensitive, err.Error())
+		// Publish Kafka log for failed non-stream request
+		responseTime := time.Since(startTime).Milliseconds()
+		maskedPrompt := h.extractUserMessage(messages)
+		h.publishKafkaLog(c, requestID, apiKey, modelConfig, 0, 0, responseTime, "error", maskedPrompt)
 		return
 	}
 
@@ -244,6 +259,11 @@ func (h *ChatHandler) handleNonStreamRequest(c *gin.Context, req *models.ChatCom
 
 	// 记录使用量
 	h.serviceManager.AuthService.RecordUsage(apiKey, chatResp.Usage.TotalTokens)
+
+	// Publish Kafka log for successful non-stream request
+	responseTime := time.Since(startTime).Milliseconds()
+	maskedPrompt := h.extractUserMessage(messages)
+	h.publishKafkaLog(c, requestID, apiKey, modelConfig, chatResp.Usage.PromptTokens, chatResp.Usage.CompletionTokens, responseTime, "success", maskedPrompt)
 
 	// 返回响应
 	c.JSON(http.StatusOK, chatResp)
@@ -285,6 +305,88 @@ func (h *ChatHandler) logCommunication(
 
 	// Non-blocking log
 	h.commLogger.Log(record)
+}
+
+// publishKafkaLog publishes a gateway log to Kafka asynchronously
+func (h *ChatHandler) publishKafkaLog(
+	c *gin.Context,
+	requestID string,
+	apiKey *models.APIKey,
+	modelConfig *models.ModelConfig,
+	inputTokens int,
+	outputTokens int,
+	responseTime int64,
+	status string,
+	maskedPrompt string,
+) {
+	if h.serviceManager.KafkaProducer == nil {
+		return // Kafka logging disabled
+	}
+
+	// Extract source tool from request headers
+	sourceTool := h.extractSourceTool(c)
+
+	// Calculate cost (if pricing available)
+	cost := h.calculateCost(modelConfig, inputTokens, outputTokens)
+
+	// Generate prompt hash for deduplication
+	promptHash := ""
+	if maskedPrompt != "" {
+		hash := sha256.Sum256([]byte(maskedPrompt))
+		promptHash = hex.EncodeToString(hash[:])[:16] // First 16 chars of hash
+	}
+
+	// Build gateway log - user_id and department_id are empty for API Key auth
+	// When JWT auth is integrated, these can be populated from claims
+	log := &services.GatewayLog{
+		RequestID:     requestID,
+		UserID:        fmt.Sprintf("apikey:%d", apiKey.ID), // Use API Key ID as user identifier
+		DepartmentID:  "",                                   // To be populated when API Key has department association
+		Model:         modelConfig.Name,
+		Provider:      modelConfig.Protocol, // Use Protocol as provider identifier
+		SourceTool:    sourceTool,
+		InputTokens:   inputTokens,
+		OutputTokens:  outputTokens,
+		Cost:          cost,
+		ResponseTime:  responseTime,
+		Status:        status,
+		Timestamp:     time.Now(),
+		PromptHash:    promptHash,
+		PromptContent: maskedPrompt, // Already masked by SecurityService
+	}
+
+	// Publish asynchronously - errors logged but don't fail request
+	if err := h.serviceManager.KafkaProducer.PublishLog(c.Request.Context(), log); err != nil {
+		h.logger.WithError(err).WithField("request_id", requestID).Error("Failed to publish log to Kafka")
+	}
+}
+
+// calculateCost calculates the cost based on model pricing
+func (h *ChatHandler) calculateCost(modelConfig *models.ModelConfig, inputTokens, outputTokens int) float64 {
+	// Default cost calculation - can be enhanced with actual pricing from model config
+	// Pricing is typically stored in model metadata or a separate pricing table
+	// For now, return 0 (cost calculation will be enhanced when pricing data is available)
+	return 0
+}
+
+// extractUserMessage extracts the user message from messages for logging
+// Returns the first user message content (already masked by SecurityService)
+func (h *ChatHandler) extractUserMessage(messages []models.ChatMessage) string {
+	for _, msg := range messages {
+		if msg.Role == "user" {
+			return msg.Content
+		}
+	}
+	return ""
+}
+
+// extractSourceTool extracts the source tool from request context
+func (h *ChatHandler) extractSourceTool(c *gin.Context) string {
+	sourceTool := c.GetHeader("X-Source-Tool")
+	if sourceTool == "" {
+		sourceTool = c.GetHeader("User-Agent")
+	}
+	return sourceTool
 }
 
 // buildStreamResponseJSON builds a JSON response for streaming
