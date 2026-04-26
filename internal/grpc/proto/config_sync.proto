@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package wolink;
+
+option go_package = "wolink-core/internal/grpc/proto";
+
+// ConfigSync service for bidirectional streaming between admin and gateway nodes
+service ConfigSync {
+  // Connect establishes a bidirectional stream for heartbeats and config updates
+  rpc Connect(stream Heartbeat) returns (stream ConfigUpdate);
+}
+
+// Heartbeat sent from gateway to admin
+message Heartbeat {
+  string node_id = 1;
+  int64 config_version = 2;
+  int64 timestamp = 3;
+  NodeMetrics metrics = 4;
+}
+
+// NodeMetrics contains runtime metrics for the gateway node
+message NodeMetrics {
+  double cpu_percent = 1;
+  double memory_percent = 2;
+  int64 request_rate = 3;
+}
+
+// ConfigUpdate pushed from admin to gateway
+message ConfigUpdate {
+  int64 version = 1;
+  ConfigType type = 2;
+  bytes payload = 3;
+}
+
+// ConfigType defines the type of configuration update
+enum ConfigType {
+  FULL = 0;
+  JWT_KEY = 1;
+  PROVIDERS = 2;
+  MODELS = 3;
+  SECURITY_RULES = 4;
+  NODE_COMMAND = 5;
+  USER_QUOTA = 6;
+  DEPT_QUOTA = 7;
+}
+
+// NodeCommand for admin to control gateway nodes
+message NodeCommand {
+  string command = 1; // "maintenance", "restart", "force_down"
+  string confirmation_token = 2; // Required for force_down
+}
+
+// UserQuota represents a user's monthly quota information
+message UserQuota {
+  string user_id = 1;
+  double monthly_quota = 2;
+  double used = 3;
+  int64 updated_at = 4;
+}
+
+// DeptQuota represents a department's monthly budget information
+message DeptQuota {
+  string department_id = 1;
+  double monthly_budget = 2;
+  double used = 3;
+  int64 updated_at = 4;
+}
+
+// QuotaSync contains quota data for synchronization
+message QuotaSync {
+  repeated UserQuota user_quotas = 1;
+  repeated DeptQuota dept_quotas = 2;
+}
