@@ -46,6 +46,7 @@ func SetupRoutes(serviceManager *services.ServiceManager, logger *logrus.Logger,
 		v1.POST("/rerank", chatHandler.Rerank)
 		v1.POST("/audio/transcriptions", chatHandler.AudioTranscriptions)
 		v1.POST("/audio/speech", chatHandler.AudioSpeech)
+		v1.POST("/ocr", chatHandler.OCR)
 		v1.GET("/models", chatHandler.ListModels)
 	}
 
