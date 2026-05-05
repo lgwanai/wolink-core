@@ -318,6 +318,27 @@ type AudioSpeechRequest struct {
 	RawBody []byte `json:"-"`
 }
 
+// OCR API 请求和响应结构
+
+type OCRRequest struct {
+	File           interface{} `json:"file" binding:"required"` // Usually handled via multipart form
+	Model          string      `json:"model" binding:"required"`
+	Language       string      `json:"language,omitempty"`
+	ResponseFormat string      `json:"response_format,omitempty"`
+}
+
+type OCRResponse struct {
+	Text     string      `json:"text"`
+	Language string      `json:"language,omitempty"`
+	Regions  []OCRRegion `json:"regions,omitempty"`
+}
+
+type OCRRegion struct {
+	Text        string `json:"text"`
+	Confidence  float64 `json:"confidence,omitempty"`
+	BoundingBox []int   `json:"bounding_box,omitempty"`
+}
+
 // 模型配置文件结构
 
 type ModelConfigFile struct {
