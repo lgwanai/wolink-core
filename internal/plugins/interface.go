@@ -42,6 +42,11 @@ type AudioPlugin interface {
 	CallAudioSpeech(ctx context.Context, config *models.ModelConfig, request *models.AudioSpeechRequest) (*http.Response, error)
 }
 
+// OCRPlugin 支持OCR的插件接口
+type OCRPlugin interface {
+	CallOCR(ctx context.Context, config *models.ModelConfig, request *models.OCRRequest) (*models.OCRResponse, error)
+}
+
 // PluginInfo 插件信息
 type PluginInfo struct {
 	Name        string `json:"name"`
