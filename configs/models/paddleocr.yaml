@@ -1,0 +1,21 @@
+id: PaddleOCR-VL-1.5
+name: PaddleOCR-VL-1.5
+icon_uri: default_icon/paddleocr.png
+icon_url: ""
+description:
+  zh: PaddleOCR 视觉语言模型
+  en: PaddleOCR Vision Language Model
+default_parameters: []
+meta:
+  protocol: openai
+  capability:
+    function_call: false
+    input_modal:
+      - image
+    output_modal:
+      - text
+conn_config:
+  base_url: "http://127.0.0.1:8099/v1"
+  api_key: "lingting"
+  model: "PaddleOCR-VL-1.5"
+status: 1
