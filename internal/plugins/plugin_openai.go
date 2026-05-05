@@ -367,3 +367,82 @@ func (p *OpenAIPlugin) CallAudioSpeech(ctx context.Context, config *models.Model
 
 	return resp, nil
 }
+
+// CallOCR 调用OCR模型
+func (p *OpenAIPlugin) CallOCR(ctx context.Context, config *models.ModelConfig, request *models.OCRRequest) (*models.OCRResponse, error) {
+	connConfig := config.ConnConfig
+	endpoint := connConfig.BaseURL
+	if endpoint == "" {
+		endpoint = "https://api.openai.com"
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Add file
+	if fileHeader, ok := request.File.(*multipart.FileHeader); ok {
+		file, err := fileHeader.Open()
+		if err != nil {
+			return nil, fmt.Errorf("failed to open file: %w", err)
+		}
+		defer file.Close()
+
+		part, err := writer.CreateFormFile("file", fileHeader.Filename)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create form file: %w", err)
+		}
+		if _, err := io.Copy(part, file); err != nil {
+			return nil, fmt.Errorf("failed to copy file content: %w", err)
+		}
+	} else {
+		return nil, fmt.Errorf("invalid file type in request")
+	}
+
+	// Add other fields
+	model := connConfig.Model
+	if model == "" {
+		model = request.Model
+	}
+	writer.WriteField("model", model)
+
+	if request.Language != "" {
+		writer.WriteField("language", request.Language)
+	}
+	if request.ResponseFormat != "" {
+		writer.WriteField("response_format", request.ResponseFormat)
+	}
+
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close multipart writer: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", endpoint+"/v1/ocr", body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+	httpReq.Header.Set("Authorization", "Bearer "+connConfig.APIKey)
+
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("api error (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var result models.OCRResponse
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &result, nil
+}
