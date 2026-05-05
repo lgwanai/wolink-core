@@ -768,6 +768,60 @@ func (h *ChatHandler) AudioSpeech(c *gin.Context) {
 	}
 }
 
+// OCR 处理OCR请求
+func (h *ChatHandler) OCR(c *gin.Context) {
+	apiKey, exists := c.Get("api_key")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	apiKeyInfo := apiKey.(*models.APIKey)
+
+	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse multipart form"})
+		return
+	}
+
+	modelName := c.Request.FormValue("model")
+	if modelName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "model is required"})
+		return
+	}
+
+	var req models.OCRRequest
+	req.Model = modelName
+	req.Language = c.Request.FormValue("language")
+	req.ResponseFormat = c.Request.FormValue("response_format")
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		return
+	}
+	defer file.Close()
+	req.File = header
+
+	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.ID, req.Model)
+	if err != nil || len(availableModels) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("model %s not available", req.Model)})
+		return
+	}
+
+	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels, "random")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp, err := h.serviceManager.PluginService.CallOCR(c.Request.Context(), modelConfig, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
 // ListModels 列出可用模型
 func (h *ChatHandler) ListModels(c *gin.Context) {
 	// 获取API Key信息
