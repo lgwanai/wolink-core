@@ -288,6 +288,21 @@ func (s *PluginService) CallAudioSpeech(ctx context.Context, modelConfig *models
 	return nil, fmt.Errorf("plugin %s does not support audio speech", plugin.Name())
 }
 
+// CallOCR 调用OCR模型
+func (s *PluginService) CallOCR(ctx context.Context, modelConfig *models.ModelConfig, request *models.OCRRequest) (*models.OCRResponse, error) {
+	plugin, exists := s.GetPlugin(modelConfig.Protocol)
+	if !exists {
+		return nil, fmt.Errorf("plugin not found for protocol: %s", modelConfig.Protocol)
+	}
+
+	if ocrPlugin, ok := plugin.(plugins.OCRPlugin); ok {
+		s.logger.Debugf("Calling OCR model %s via plugin %s", modelConfig.Name, plugin.Name())
+		return ocrPlugin.CallOCR(ctx, modelConfig, request)
+	}
+
+	return nil, fmt.Errorf("plugin %s does not support OCR", plugin.Name())
+}
+
 // ListPlugins 列出所有插件
 func (s *PluginService) ListPlugins() map[string]*plugins.PluginInfo {
 	s.mutex.RLock()
