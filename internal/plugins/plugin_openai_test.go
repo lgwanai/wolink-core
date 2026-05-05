@@ -1,9 +1,11 @@
 package plugins
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -414,6 +416,233 @@ func TestOpenAIPlugin_Call_DefaultBaseURL(t *testing.T) {
 		strings.Contains(err.Error(), "context") ||
 		strings.Contains(err.Error(), "timeout"),
 		"Expected error to be related to OpenAI connection or timeout, got: %v", err)
+}
+
+// OCR Tests
+
+func TestOpenAIPlugin_CallOCR_Success(t *testing.T) {
+	// Test: successful OCR request returns parsed response
+	plugin, server := setupTestPlugin(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/ocr", r.URL.Path)
+		assert.Equal(t, "Bearer test-api-key", r.Header.Get("Authorization"))
+		
+		// Verify multipart content type
+		contentType := r.Header.Get("Content-Type")
+		assert.Contains(t, contentType, "multipart/form-data")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		resp := models.OCRResponse{
+			Text:     "识别的文本内容",
+			Language: "zh",
+		}
+		json.NewEncoder(w).Encode(resp)
+	})
+	defer server.Close()
+
+	config := &models.ModelConfig{
+		ConnConfig: models.ConnectionConfig{
+			BaseURL: server.URL,
+			APIKey:  "test-api-key",
+			Model:   "GLM-OCR-bf16",
+		},
+	}
+
+	// Create a test file header
+	fileHeader := createTestFileHeader(t, "test.png", "image/png")
+	
+	req := &models.OCRRequest{
+		Model: "GLM-OCR-bf16",
+		File:  fileHeader,
+	}
+
+	ctx := context.Background()
+	resp, err := plugin.CallOCR(ctx, config, req)
+
+	require.NoError(t, err)
+	assert.Equal(t, "识别的文本内容", resp.Text)
+	assert.Equal(t, "zh", resp.Language)
+}
+
+func TestOpenAIPlugin_CallOCR_InvalidFileType(t *testing.T) {
+	// Test: invalid file type returns error
+	logger := logrus.New()
+	plugin := NewOpenAIPlugin(logger)
+
+	config := &models.ModelConfig{
+		ConnConfig: models.ConnectionConfig{
+			BaseURL: "http://localhost:8080",
+			APIKey:  "test-key",
+			Model:   "GLM-OCR-bf16",
+		},
+	}
+
+	// Pass invalid file type (not a FileHeader)
+	req := &models.OCRRequest{
+		Model: "GLM-OCR-bf16",
+		File:  "not a file header",
+	}
+
+	ctx := context.Background()
+	_, err := plugin.CallOCR(ctx, config, req)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid file type")
+}
+
+func TestOpenAIPlugin_CallOCR_ModelSelection(t *testing.T) {
+	// Test: model parameter routing to correct endpoint
+	tests := []struct {
+		name           string
+		configModel    string
+		requestModel   string
+		expectedModel  string
+	}{
+		{
+			name:          "config model takes precedence",
+			configModel:   "PaddleOCR-VL-1.5",
+			requestModel:  "GLM-OCR-bf16",
+			expectedModel: "PaddleOCR-VL-1.5",
+		},
+		{
+			name:          "request model used when config empty",
+			configModel:   "",
+			requestModel:  "GLM-OCR-bf16",
+			expectedModel: "GLM-OCR-bf16",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin, server := setupTestPlugin(func(w http.ResponseWriter, r *http.Request) {
+				// Verify the model field in the request
+				_ = r.ParseMultipartForm(32 << 20)
+				model := r.FormValue("model")
+				assert.Equal(t, tt.expectedModel, model)
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				resp := models.OCRResponse{
+					Text:     "test text",
+					Language: "en",
+				}
+				json.NewEncoder(w).Encode(resp)
+			})
+			defer server.Close()
+
+			config := &models.ModelConfig{
+				ConnConfig: models.ConnectionConfig{
+					BaseURL: server.URL,
+					APIKey:  "test-key",
+					Model:   tt.configModel,
+				},
+			}
+
+			fileHeader := createTestFileHeader(t, "test.png", "image/png")
+			
+			req := &models.OCRRequest{
+				Model: tt.requestModel,
+				File:  fileHeader,
+			}
+
+			ctx := context.Background()
+			_, err := plugin.CallOCR(ctx, config, req)
+
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestOpenAIPlugin_CallOCR_ServerError(t *testing.T) {
+	// Test: OCR server error returns error
+	plugin, server := setupTestPlugin(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "Internal server error"}`))
+	})
+	defer server.Close()
+
+	config := &models.ModelConfig{
+		ConnConfig: models.ConnectionConfig{
+			BaseURL: server.URL,
+			APIKey:  "test-key",
+			Model:   "GLM-OCR-bf16",
+		},
+	}
+
+	fileHeader := createTestFileHeader(t, "test.png", "image/png")
+	
+	req := &models.OCRRequest{
+		Model: "GLM-OCR-bf16",
+		File:  fileHeader,
+	}
+
+	ctx := context.Background()
+	_, err := plugin.CallOCR(ctx, config, req)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "500")
+}
+
+func TestOpenAIPlugin_CallOCR_MalformedJSON(t *testing.T) {
+	// Test: malformed JSON response returns parse error
+	plugin, server := setupTestPlugin(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{invalid json`))
+	})
+	defer server.Close()
+
+	config := &models.ModelConfig{
+		ConnConfig: models.ConnectionConfig{
+			BaseURL: server.URL,
+			APIKey:  "test-key",
+			Model:   "GLM-OCR-bf16",
+		},
+	}
+
+	fileHeader := createTestFileHeader(t, "test.png", "image/png")
+	
+	req := &models.OCRRequest{
+		Model: "GLM-OCR-bf16",
+		File:  fileHeader,
+	}
+
+	ctx := context.Background()
+	_, err := plugin.CallOCR(ctx, config, req)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "parse")
+}
+
+// createTestFileHeader creates a multipart.FileHeader for testing
+func createTestFileHeader(t *testing.T, filename, contentType string) *multipart.FileHeader {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	
+	part, err := writer.CreateFormFile("file", filename)
+	require.NoError(t, err)
+	
+	// Write some test content
+	testContent := "test file content for OCR"
+	_, err = part.Write([]byte(testContent))
+	require.NoError(t, err)
+	
+	require.NoError(t, writer.Close())
+	
+	// Parse the multipart form
+	req := httptest.NewRequest("POST", "/test", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	
+	err = req.ParseMultipartForm(32 << 20)
+	require.NoError(t, err)
+	
+	file, header, err := req.FormFile("file")
+	require.NoError(t, err)
+	defer file.Close()
+	
+	return header
 }
 
 // Helper functions
