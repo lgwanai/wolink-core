@@ -83,6 +83,7 @@ Progress: [==========] 100%
 | 3. Observability | 4/4 | 4 | Complete |
 | 4. Testing & Validation | 4/4 | 4 | Complete |
 | 5. Admin Auth Refactor | 4/4 | 4 | Complete |
+| Phase 07 P01 | 70s | 2 tasks | 2 files |
 
 ## Test Coverage Summary
 
@@ -104,6 +105,7 @@ Progress: [==========] 100%
 
 - Phase 5 added: 去掉管理员鉴权、部门管理等跟网关无关的功能，wolink-core仅提供最内核的网关能力。后续会有admin管理端，跟wolink-core保持通信，管理端能够展示wolink-core节点状态，也能够控制节点重启，所以需要暴露这些接口给到admin端，但是因为操作权限高，接口需要token方式校验，部署结构是一个admin管理端，N个wolink-core节点。插件的状态、安装列表，插件的安装卸载，都需要提供给管理端接口。总之所有管理均由admin端完成，请更新代码
 - Phase 6 added: 去掉数据库连接相关的业务逻辑，网关不要直接访问数据库，完全使用admin来控制，提供接口
+- Phase 7 added: 增加OCR模型配置支持GLM-OCR和PaddleOCR连接及测试用例
 
 ### Decisions
 
@@ -127,6 +129,7 @@ Progress: [==========] 100%
 18. **Benchmarks:** Cache hit ~30us, OpenAI call overhead ~57us with mock server
 19. **Admin auth refactor:** Static token (X-Admin-Token header) replaces JWT-based auth, simplifying gateway to core responsibilities
 20. **Gateway scope:** wolink-core focuses on gateway functionality; admin/department/user management moved to external admin service
+- [Phase 07]: OCR model configs use image input_modal following ASR pattern
 
 ### Completed Items
 
