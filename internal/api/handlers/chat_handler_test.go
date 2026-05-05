@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -156,6 +157,7 @@ func setupTestChatHandler(t *testing.T) (*ChatHandler, *gin.Engine, *gorm.DB, fu
 	router.POST("/v1/chat/completions", handler.ChatCompletions)
 	router.GET("/v1/models", handler.ListModels)
 	router.POST("/v1/embeddings", handler.Embeddings)
+	router.POST("/v1/ocr", handler.OCR)
 
 	cleanup := func() {
 		sqlDB, _ := db.DB()
@@ -493,4 +495,73 @@ func TestChatCompletions_EmptyContent(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// OCR Tests
+
+func TestOCR_Unauthorized(t *testing.T) {
+	// Test: no API key returns 401
+	_, router, _, cleanup := setupTestChatHandler(t)
+	defer cleanup()
+
+	// Create multipart request
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("model", "GLM-OCR-bf16")
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/v1/ocr", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	// No X-API-Key header
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestOCR_MissingModel(t *testing.T) {
+	// Test: missing model returns 400
+	_, router, _, cleanup := setupTestChatHandler(t)
+	defer cleanup()
+
+	// Create multipart request without model
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	// Add file field but no model
+	part, _ := writer.CreateFormFile("file", "test.png")
+	part.Write([]byte("test image"))
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/v1/ocr", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("X-API-Key", "test-key-id")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "model is required")
+}
+
+func TestOCR_MissingFile(t *testing.T) {
+	// Test: missing file returns 400
+	_, router, _, cleanup := setupTestChatHandler(t)
+	defer cleanup()
+
+	// Create multipart request without file
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("model", "GLM-OCR-bf16")
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/v1/ocr", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("X-API-Key", "test-key-id")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "file is required")
 }
