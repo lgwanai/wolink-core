@@ -127,3 +127,16 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 6 to break down)
+
+### Phase 7: 增加OCR模型配置支持GLM-OCR和PaddleOCR连接及测试用例
+
+**Goal:** Enable OCR model configuration for GLM-OCR and PaddleOCR with full plugin support, API endpoint, and comprehensive testing
+**Depends on:** Phase 6
+**Requirements:** OCR-01, OCR-02, OCR-03, OCR-04
+**Plans:** 4 plans in 3 waves
+
+Plans:
+- [ ] 07-01: Create OCR model configuration files for GLM-OCR and PaddleOCR - Wave 1
+- [ ] 07-02: Add OCRPlugin interface and OpenAI plugin implementation - Wave 1
+- [ ] 07-03: Add OCR handler, route, and service method - Wave 2
+- [ ] 07-04: Write comprehensive OCR tests and verify with test image - Wave 3
