@@ -31,11 +31,33 @@ func setupBenchmarkAuthService(b *testing.B) (*AuthService, *miniredis.Miniredis
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 
-	// Create config
+	// Create config with single-node mode and test API keys
 	cfg := &config.Config{}
+	cfg.Gateway.Mode = "single"
+	cfg.Gateway.APIKeys = []config.APIKeyEntry{
+		{
+			KeyID:           "ak-benchmark-cache-hit",
+			KeySecret:       "bench-secret",
+			Name:            "benchmark-key",
+			DailyLimit:      10000,
+			MonthlyLimit:    300000,
+			ConcurrentLimit: 10,
+		},
+		{
+			KeyID:           "ak-benchmark-parallel",
+			KeySecret:       "bench-secret",
+			Name:            "benchmark-parallel-key",
+			DailyLimit:      10000,
+			MonthlyLimit:    300000,
+			ConcurrentLimit: 10,
+		},
+	}
 
-	// Create service with nil DB since benchmarks don't need it
-	service := NewAuthService(nil, redisClient, logger, cfg)
+	// Create APIKeyValidator (config-driven, no DB)
+	validator := NewAPIKeyValidator(cfg, logger)
+
+	// Create service with APIKeyValidator
+	service := NewAuthService(redisClient, logger, cfg, validator)
 
 	return service, mr, redisClient
 }

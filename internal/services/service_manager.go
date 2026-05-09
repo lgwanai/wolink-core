@@ -21,10 +21,8 @@ type ServiceManager struct {
 	NodeService         *NodeService
 	KafkaProducer       *KafkaProducer
 	QuotaChecker        *QuotaChecker
+	AdminSyncService    *AdminSyncService
 }
-
-// ConversationService, UsageService, QueueService removed.
-// These database-dependent services belong to the admin service.
 
 func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Config) *ServiceManager {
 	sm := &ServiceManager{
@@ -33,10 +31,12 @@ func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Con
 		Config: cfg,
 	}
 
-	// Pass nil for db as temporary measure — Plan 02 will fully refactor these services
-	sm.AuthService = NewAuthService(nil, rdb, logger, cfg)
-	sm.ModelService = NewModelService(nil, rdb, logger, cfg)
-	sm.ModelConfigService = NewModelConfigService(nil, rdb, logger, cfg)
+	// Create APIKeyValidator for config-driven auth (no DB)
+	apiKeyValidator := NewAPIKeyValidator(cfg, logger)
+
+	sm.AuthService = NewAuthService(rdb, logger, cfg, apiKeyValidator)
+	sm.ModelService = NewModelService()
+	sm.ModelConfigService = NewModelConfigService(logger, cfg)
 	sm.SecurityService = NewSecurityService(cfg)
 	sm.PluginService = NewPluginService(logger, cfg)
 	sm.NodeService = NewNodeService(cfg, logger, "dev")
@@ -60,7 +60,15 @@ func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Con
 	sm.QuotaChecker = NewQuotaChecker(rdb, logger, cfg)
 	logger.Info("QuotaChecker initialized")
 
-	// 加载模型配置
+	// Start AdminSyncService in multi-node mode
+	if cfg.Gateway.Mode == "multi" {
+		syncService := NewAdminSyncService(cfg, logger, apiKeyValidator)
+		syncService.StartSync()
+		sm.AdminSyncService = syncService
+		logger.Infof("AdminSyncService started (multi-node mode, syncing from %s)", cfg.Gateway.AdminMaster.URL)
+	}
+
+	// 加载模型配置（filesystem only, no DB）
 	if err := sm.ModelConfigService.LoadModelConfigs(); err != nil {
 		logger.Errorf("Failed to load model configs: %v", err)
 	}
@@ -70,6 +78,10 @@ func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Con
 
 // Stop 停止所有服务
 func (sm *ServiceManager) Stop() {
+	if sm.AdminSyncService != nil {
+		sm.AdminSyncService.StopSync()
+		sm.Logger.Info("AdminSyncService stopped")
+	}
 	if sm.KafkaProducer != nil {
 		sm.KafkaProducer.Close()
 	}

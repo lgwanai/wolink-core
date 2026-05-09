@@ -52,10 +52,11 @@ func setupBenchmarkChatHandler() (*ChatHandler, *gin.Engine, func()) {
 		Config: cfg,
 	}
 
-	// Create services (nil db for transitional state — Plan 02 refactor)
+	// Create services (no DB — gateway is stateless)
+	validator := services.NewAPIKeyValidator(cfg, logger)
 	sm.SecurityService = services.NewSecurityService(cfg)
-	sm.ModelConfigService = services.NewModelConfigService(nil, rdb, logger, cfg)
-	sm.AuthService = services.NewAuthService(nil, rdb, logger, cfg)
+	sm.ModelConfigService = services.NewModelConfigService(logger, cfg)
+	sm.AuthService = services.NewAuthService(rdb, logger, cfg, validator)
 	sm.PluginService = services.NewPluginService(logger, cfg)
 
 	// Stop the plugin watcher to avoid background goroutines

@@ -107,10 +107,11 @@ func setupTestChatHandler(t *testing.T) (*ChatHandler, *gin.Engine, func()) {
 		Config: cfg,
 	}
 
-	// Create services manually (nil db for transitional state)
+	// Create services manually (no DB — gateway is stateless)
+	validator := services.NewAPIKeyValidator(cfg, logger)
 	sm.SecurityService = services.NewSecurityService(cfg)
-	sm.ModelConfigService = services.NewModelConfigService(nil, rdb, logger, cfg)
-	sm.AuthService = services.NewAuthService(nil, rdb, logger, cfg)
+	sm.ModelConfigService = services.NewModelConfigService(logger, cfg)
+	sm.AuthService = services.NewAuthService(rdb, logger, cfg, validator)
 	sm.PluginService = services.NewPluginService(logger, cfg)
 
 	// Create handler
@@ -208,7 +209,7 @@ func TestChatCompletions_NoModelsAvailable(t *testing.T) {
 		Logger: logger,
 		Config: cfg,
 	}
-	sm.ModelConfigService = services.NewModelConfigService(nil, rdb, logger, cfg)
+	sm.ModelConfigService = services.NewModelConfigService(logger, cfg)
 
 	// Create handler
 	handler := NewChatHandler(sm, logger)

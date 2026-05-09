@@ -9,52 +9,56 @@ import (
 	"wolink-core/internal/models"
 	"wolink-core/internal/testutil/mocks"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-func setupAuthService(t *testing.T) (*AuthService, *miniredis.Miniredis, *redis.Client, sqlmock.Sqlmock, *gorm.DB) {
+func setupAuthService(t *testing.T) (*AuthService, *miniredis.Miniredis, *redis.Client) {
 	t.Helper()
 
 	mr, redisClient := mocks.NewMockRedis(t)
 
-	db, sqlMock, err := mocks.NewMockDB(t)
-	if err != nil {
-		t.Fatalf("failed to create mock db: %v", err)
-	}
-
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
+
+	// Config with single-node mode and test API keys
 	cfg := &config.Config{}
+	cfg.Gateway.Mode = "single"
+	cfg.Gateway.APIKeys = []config.APIKeyEntry{
+		{
+			KeyID:           "ak-test123",
+			KeySecret:       "test-secret",
+			Name:            "test-key",
+			DailyLimit:      10000,
+			MonthlyLimit:    300000,
+			ConcurrentLimit: 10,
+		},
+		{
+			KeyID:           "ak-newkey",
+			KeySecret:       "new-secret",
+			Name:            "new-key",
+			DailyLimit:      5000,
+			MonthlyLimit:    150000,
+			ConcurrentLimit: 5,
+		},
+	}
 
-	service := NewAuthService(db, redisClient, logger, cfg)
+	validator := NewAPIKeyValidator(cfg, logger)
+	service := NewAuthService(redisClient, logger, cfg, validator)
 
-	return service, mr, redisClient, sqlMock, db
+	return service, mr, redisClient
 }
 
-func TestValidateAPIKey_CacheHit(t *testing.T) {
-	service, mr, _, _, _ := setupAuthService(t)
+func TestValidateAPIKey_ValidKey(t *testing.T) {
+	service, _, _ := setupAuthService(t)
 
 	keyID := "ak-test123"
-	cacheKey := fmt.Sprintf("apikey:%s", keyID)
-	mr.HSet(cacheKey,
-		"id", "1",
-		"key_id", keyID,
-		"name", "test-key",
-		"status", "active",
-		"daily_limit", "10000",
-		"monthly_limit", "300000",
-		"concurrent_limit", "10",
-	)
-
 	apiKey, err := service.ValidateAPIKey(keyID)
 
 	if err != nil {
@@ -74,94 +78,10 @@ func TestValidateAPIKey_CacheHit(t *testing.T) {
 	}
 }
 
-func TestValidateAPIKey_CacheMiss(t *testing.T) {
-	service, mr, _, sqlMock, _ := setupAuthService(t)
-
-	keyID := "ak-newkey"
-
-	rows := sqlmock.NewRows([]string{
-		"id", "key_id", "key_secret", "name", "status",
-		"daily_limit", "monthly_limit", "concurrent_limit",
-		"daily_usage", "monthly_usage", "total_usage",
-		"created_at", "updated_at",
-	}).AddRow(
-		2, keyID, "secret", "new-key", "active",
-		5000, 150000, 5,
-		0, 0, 0,
-		time.Now(), time.Now(),
-	)
-
-	sqlMock.ExpectQuery("SELECT \\* FROM `api_keys`").
-		WithArgs(keyID, "active", 1).
-		WillReturnRows(rows)
-
-	apiKey, err := service.ValidateAPIKey(keyID)
-
-	if err != nil {
-		t.Errorf("expected no error, got: %v", err)
-	}
-	if apiKey == nil {
-		t.Fatal("expected api key, got nil")
-	}
-	if apiKey.KeyID != keyID {
-		t.Errorf("expected key_id %s, got %s", keyID, apiKey.KeyID)
-	}
-
-	cacheKey := fmt.Sprintf("apikey:%s", keyID)
-	cached := mr.HGet(cacheKey, "key_id")
-	if cached != keyID {
-		t.Errorf("expected cache to be populated with key_id %s, got %s", keyID, cached)
-	}
-
-	if err := sqlMock.ExpectationsWereMet(); err != nil {
-		t.Errorf("unfulfilled expectations: %v", err)
-	}
-}
-
-func TestValidateAPIKey_DisabledKey(t *testing.T) {
-	service, mr, _, _, _ := setupAuthService(t)
-
-	keyID := "ak-disabled"
-	cacheKey := fmt.Sprintf("apikey:%s", keyID)
-	mr.HSet(cacheKey,
-		"id", "3",
-		"key_id", keyID,
-		"name", "disabled-key",
-		"status", "disabled",
-		"daily_limit", "10000",
-		"monthly_limit", "300000",
-		"concurrent_limit", "10",
-	)
-
-	apiKey, err := service.ValidateAPIKey(keyID)
-
-	if err == nil {
-		t.Error("expected error for disabled key, got nil")
-	}
-	if apiKey != nil {
-		t.Errorf("expected nil api key, got: %+v", apiKey)
-	}
-	if err != nil && err.Error() != "API key is disabled" {
-		t.Errorf("expected 'API key is disabled' error, got: %v", err)
-	}
-}
-
 func TestValidateAPIKey_InvalidKey(t *testing.T) {
-	service, _, _, sqlMock, _ := setupAuthService(t)
+	service, _, _ := setupAuthService(t)
 
 	keyID := "ak-nonexistent"
-
-	rows := sqlmock.NewRows([]string{
-		"id", "key_id", "key_secret", "name", "status",
-		"daily_limit", "monthly_limit", "concurrent_limit",
-		"daily_usage", "monthly_usage", "total_usage",
-		"created_at", "updated_at",
-	})
-
-	sqlMock.ExpectQuery("SELECT \\* FROM `api_keys`").
-		WithArgs(keyID, "active", 1).
-		WillReturnRows(rows)
-
 	apiKey, err := service.ValidateAPIKey(keyID)
 
 	if err == nil {
@@ -173,14 +93,29 @@ func TestValidateAPIKey_InvalidKey(t *testing.T) {
 	if err != nil && err.Error() != "invalid API key" {
 		t.Errorf("expected 'invalid API key' error, got: %v", err)
 	}
+}
 
-	if err := sqlMock.ExpectationsWereMet(); err != nil {
-		t.Errorf("unfulfilled expectations: %v", err)
+func TestValidateAPIKey_EmptyWhitelist(t *testing.T) {
+	// Test validation with an empty config (no API keys defined)
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	cfg := &config.Config{}
+	cfg.Gateway.Mode = "single"
+
+	mr, redisClient := mocks.NewMockRedis(t)
+	defer mr.Close()
+
+	validator := NewAPIKeyValidator(cfg, logger)
+	service := NewAuthService(redisClient, logger, cfg, validator)
+
+	_, err := service.ValidateAPIKey("ak-any-key")
+	if err == nil {
+		t.Error("expected error for empty whitelist, got nil")
 	}
 }
 
 func TestCheckRateLimit_ConcurrentLimitExceeded(t *testing.T) {
-	service, mr, _, _, _ := setupAuthService(t)
+	service, mr, _ := setupAuthService(t)
 
 	apiKey := &models.APIKey{
 		ID:              1,
@@ -206,7 +141,7 @@ func TestCheckRateLimit_ConcurrentLimitExceeded(t *testing.T) {
 }
 
 func TestCheckRateLimit_DailyLimitExceeded(t *testing.T) {
-	service, mr, _, _, _ := setupAuthService(t)
+	service, mr, _ := setupAuthService(t)
 
 	apiKey := &models.APIKey{
 		ID:              1,
@@ -237,7 +172,7 @@ func TestCheckRateLimit_DailyLimitExceeded(t *testing.T) {
 }
 
 func TestCheckRateLimit_MonthlyLimitExceeded(t *testing.T) {
-	service, mr, _, _, _ := setupAuthService(t)
+	service, mr, _ := setupAuthService(t)
 
 	apiKey := &models.APIKey{
 		ID:              1,
@@ -272,7 +207,7 @@ func TestCheckRateLimit_MonthlyLimitExceeded(t *testing.T) {
 }
 
 func TestCheckRateLimit_AllLimitsPass(t *testing.T) {
-	service, mr, _, _, _ := setupAuthService(t)
+	service, mr, _ := setupAuthService(t)
 
 	apiKey := &models.APIKey{
 		ID:              1,
@@ -303,44 +238,8 @@ func TestCheckRateLimit_AllLimitsPass(t *testing.T) {
 	}
 }
 
-func TestGenerateAPIKey(t *testing.T) {
-	service, _, _, sqlMock, _ := setupAuthService(t)
-
-	name := "test-key"
-
-	sqlMock.ExpectBegin()
-	sqlMock.ExpectExec("INSERT INTO `api_keys`").
-		WillReturnResult(sqlmock.NewResult(1, 1))
-	sqlMock.ExpectCommit()
-
-	apiKey, err := service.GenerateAPIKey(name)
-
-	if err != nil {
-		t.Errorf("expected no error, got: %v", err)
-	}
-	if apiKey == nil {
-		t.Fatal("expected api key, got nil")
-	}
-	if apiKey.KeyID == "" {
-		t.Error("expected key_id to be generated")
-	}
-	if len(apiKey.KeyID) < 3 || apiKey.KeyID[:3] != "ak-" {
-		t.Errorf("expected key_id to start with 'ak-', got %s", apiKey.KeyID)
-	}
-	if apiKey.Name != name {
-		t.Errorf("expected name %s, got %s", name, apiKey.Name)
-	}
-	if apiKey.Status != "active" {
-		t.Errorf("expected status 'active', got %s", apiKey.Status)
-	}
-
-	if err := sqlMock.ExpectationsWereMet(); err != nil {
-		t.Errorf("unfulfilled expectations: %v", err)
-	}
-}
-
 func TestRecordUsage(t *testing.T) {
-	service, mr, _, _, _ := setupAuthService(t)
+	service, mr, _ := setupAuthService(t)
 
 	apiKey := &models.APIKey{
 		ID:           1,
@@ -375,35 +274,52 @@ func TestRecordUsage(t *testing.T) {
 	}
 }
 
-func TestGenerateKeyIDFormat(t *testing.T) {
-	service, _, _, _, _ := setupAuthService(t)
+// TestValidateAPIKey_MultiNode tests the multi-node mode validation path
+func TestValidateAPIKey_MultiNode(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	cfg := &config.Config{}
+	cfg.Gateway.Mode = "multi"
 
-	for i := 0; i < 10; i++ {
-		keyID := service.generateKeyID()
+	mr, redisClient := mocks.NewMockRedis(t)
+	defer mr.Close()
 
-		if len(keyID) != 35 {
-			t.Errorf("expected key_id length 35, got %d", len(keyID))
-		}
-		if keyID[:3] != "ak-" {
-			t.Errorf("expected key_id to start with 'ak-', got %s", keyID[:3])
-		}
+	validator := NewAPIKeyValidator(cfg, logger)
+
+	// Pre-populate the cache with a key (simulating AdminSyncService sync)
+	cachedKey := &models.APIKey{
+		ID:              1,
+		KeyID:           "ak-cached-key",
+		KeySecret:       "cached-secret",
+		Name:            "cached-key",
+		Status:          "active",
+		DailyLimit:      10000,
+		MonthlyLimit:    300000,
+		ConcurrentLimit: 10,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
-}
+	validator.UpdateCache(map[string]*models.APIKey{
+		"ak-cached-key": cachedKey,
+	})
 
-func TestGenerateKeySecret(t *testing.T) {
-	service, _, _, _, _ := setupAuthService(t)
+	service := NewAuthService(redisClient, logger, cfg, validator)
 
-	secrets := make(map[string]bool)
-	for i := 0; i < 10; i++ {
-		secret := service.generateKeySecret()
+	// Test valid cached key
+	apiKey, err := service.ValidateAPIKey("ak-cached-key")
+	if err != nil {
+		t.Errorf("expected no error for cached key, got: %v", err)
+	}
+	if apiKey == nil {
+		t.Fatal("expected api key, got nil")
+	}
+	if apiKey.KeyID != "ak-cached-key" {
+		t.Errorf("expected key_id ak-cached-key, got %s", apiKey.KeyID)
+	}
 
-		if len(secret) != 64 {
-			t.Errorf("expected secret length 64, got %d", len(secret))
-		}
-
-		if secrets[secret] {
-			t.Error("generated duplicate secret")
-		}
-		secrets[secret] = true
+	// Test invalid key (not in cache)
+	_, err = service.ValidateAPIKey("ak-unknown")
+	if err == nil {
+		t.Error("expected error for unknown key, got nil")
 	}
 }
