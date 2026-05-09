@@ -14,6 +14,7 @@ import (
 	"wolink-core/internal/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 )
 
 func main() {
@@ -29,13 +30,15 @@ func main() {
 	// 数据库初始化已移除 — 网关完全无状态
 	// DB-dependent operations moved to external admin service
 
-	// 初始化 Redis
-	rdb, err := utils.InitRedis(cfg.Redis, cfg.Infrastructure.Redis)
+	// 初始化 Redis (optional — gateway works without it)
+	var rdb *redis.Client
+	rdb, err = utils.InitRedis(cfg.Redis, cfg.Infrastructure.Redis)
 	if err != nil {
-		logger.Fatalf("Failed to init redis: %v", err)
+		logger.Warnf("Redis not available (rate limiting disabled): %v", err)
+		rdb = nil // Continue without Redis — rate limiting will be skipped
 	}
 
-	// 初始化服务
+	// 初始化服务 (no database dependency)
 	serviceManager := services.NewServiceManager(rdb, logger, cfg)
 
 	// 设置 Gin 模式
@@ -58,7 +61,7 @@ func main() {
 
 	// 启动服务器
 	go func() {
-		logger.Infof("Server starting on port %s", cfg.Server.Port)
+		logger.Infof("Gateway starting on port %s (mode: %s)", cfg.Server.Port, cfg.Gateway.Mode)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatalf("Failed to start server: %v", err)
 		}
@@ -82,5 +85,5 @@ func main() {
 		logger.Fatalf("Server forced to shutdown: %v", err)
 	}
 
-	logger.Info("Server exited")
+	logger.Info("Gateway exited")
 }
