@@ -19,6 +19,7 @@ type Config struct {
 	Node             NodeConfig             `mapstructure:"node"`
 	Admin            AdminConfig            `mapstructure:"admin"`
 	Kafka            KafkaConfig            `mapstructure:"kafka"`
+	Gateway          GatewayConfig          `mapstructure:"gateway"`
 }
 
 // KafkaConfig holds Kafka producer configuration for async log streaming
@@ -115,6 +116,36 @@ type CommunicationLogConfig struct {
 type NodeConfig struct {
 	ID     string `mapstructure:"id"`     // 节点唯一标识
 	Region string `mapstructure:"region"` // 区域标识（可选）
+}
+
+// GatewayConfig holds gateway operation mode and configuration sources
+type GatewayConfig struct {
+	Mode string `mapstructure:"mode"` // "single" or "multi"
+
+	// Single-node mode: API keys defined directly in config
+	APIKeys []APIKeyEntry `mapstructure:"api_keys"`
+
+	// Multi-node mode: pull configs from admin master
+	AdminMaster AdminMasterConfig `mapstructure:"admin_master"`
+
+	// Sync interval for multi-node mode (how often to pull from admin)
+	SyncInterval time.Duration `mapstructure:"sync_interval"` // e.g., "30s"
+}
+
+// APIKeyEntry defines an API key whitelist entry for single-node mode
+type APIKeyEntry struct {
+	KeyID      string `mapstructure:"key_id" json:"key_id"`
+	KeySecret  string `mapstructure:"key_secret" json:"key_secret"`
+	Name       string `mapstructure:"name" json:"name"`
+	DailyLimit int64  `mapstructure:"daily_limit" json:"daily_limit"`
+	MonthlyLimit int64 `mapstructure:"monthly_limit" json:"monthly_limit"`
+	ConcurrentLimit int `mapstructure:"concurrent_limit" json:"concurrent_limit"`
+}
+
+// AdminMasterConfig holds connection info for the admin master node
+type AdminMasterConfig struct {
+	URL   string `mapstructure:"url"`   // e.g., "http://admin.internal:8080"
+	Token string `mapstructure:"token"` // Admin API token for authentication
 }
 
 func Load() (*Config, error) {
@@ -220,4 +251,11 @@ func setDefaults() {
 	viper.SetDefault("kafka.brokers", []string{"localhost:9092"})
 	viper.SetDefault("kafka.topic", "gateway-logs")
 	viper.SetDefault("kafka.enabled", false)
+
+	// Gateway defaults - database is optional, gateway can run without it
+	viper.SetDefault("gateway.mode", "single")
+	viper.SetDefault("gateway.api_keys", []APIKeyEntry{})
+	viper.SetDefault("gateway.admin_master.url", "")
+	viper.SetDefault("gateway.admin_master.token", "")
+	viper.SetDefault("gateway.sync_interval", "30s")
 }
