@@ -37,6 +37,12 @@ Requirements for production readiness milestone. Each maps to roadmap phases.
 - [ ] **TEST-03**: Performance benchmarks for critical paths (chat completion, streaming)
 - [ ] **TEST-04**: Graceful shutdown tests verify in-flight request completion
 
+### Stateless Gateway
+
+- [x] **GW-04**: Gateway uses config-driven API key validation — whitelist from config (single-node) or admin API sync (multi-node)
+- [x] **GW-05**: API key validation works without any database connection — stateless validation only
+- [x] **GW-06**: Model configs loaded exclusively from filesystem config files (no database registry)
+
 ## v2 Requirements
 
 Deferred to future milestone.
@@ -88,10 +94,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-02 | Phase 4 | Pending |
 | TEST-03 | Phase 4 | Pending |
 | TEST-04 | Phase 4 | Pending |
+| GW-04 | Phase 6 | Complete |
+| GW-05 | Phase 6 | Complete |
+| GW-06 | Phase 6 | Complete |
 
 **Coverage:**
-- v1 requirements: 18 total
-- Mapped to phases: 18
+- v1 requirements: 21 total
+- Mapped to phases: 21
 - Unmapped: 0
 
 ---
