@@ -2,39 +2,26 @@ package models
 
 import (
 	"time"
-
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
-// APIKey API密钥表
+// APIKey API密钥 - plain data struct (GORM tags removed, gateway is stateless)
+// Note: ID field retained for AuthService compatibility; Plan 02 will refactor to use KeyID
 type APIKey struct {
-	ID        uint   `json:"id" gorm:"primaryKey"`
-	KeyID     string `json:"key_id" gorm:"type:varchar(100);uniqueIndex;not null"`
-	KeySecret string `json:"-" gorm:"type:varchar(100);not null"`
-	Name      string `json:"name" gorm:"type:varchar(100)"`
-	Status    string `json:"status" gorm:"type:varchar(20);default:'active'"` // active, disabled
+	ID        uint   `json:"id"`
+	KeyID     string `json:"key_id"`
+	KeySecret string `json:"-"`
+	Name      string `json:"name"`
+	Status    string `json:"status"` // active, disabled
 
 	// 使用限制
-	DailyLimit      int64 `json:"daily_limit" gorm:"default:10000"`    // 每日调用限制
-	MonthlyLimit    int64 `json:"monthly_limit" gorm:"default:300000"` // 每月调用限制
-	ConcurrentLimit int   `json:"concurrent_limit" gorm:"default:10"`  // 并发限制
+	DailyLimit      int64 `json:"daily_limit"`    // 每日调用限制
+	MonthlyLimit    int64 `json:"monthly_limit"` // 每月调用限制
+	ConcurrentLimit int   `json:"concurrent_limit"`  // 并发限制
 
 	// 使用统计
-	DailyUsage   int64 `json:"daily_usage" gorm:"default:0"`
-	MonthlyUsage int64 `json:"monthly_usage" gorm:"default:0"`
-	TotalUsage   int64 `json:"total_usage" gorm:"default:0"`
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-// ModelRegistry 模型注册表（只存储映射关系）
-type ModelRegistry struct {
-	ID         uint   `json:"id" gorm:"primaryKey"`
-	ConfigID   string `json:"config_id" gorm:"type:varchar(50);uniqueIndex;not null"` // 配置文件中的ID
-	Name       string `json:"name" gorm:"type:varchar(100);index;not null"`           // 模型名称
-	ConfigFile string `json:"config_file" gorm:"type:varchar(200);not null"`          // 配置文件名
+	DailyUsage   int64 `json:"daily_usage"`
+	MonthlyUsage int64 `json:"monthly_usage"`
+	TotalUsage   int64 `json:"total_usage"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -57,70 +44,8 @@ type ModelConfig struct {
 	Status     int               `json:"status"`
 }
 
-// APIKeyModelMapping API密钥与模型的映射关系
-type APIKeyModelMapping struct {
-	ID              uint `json:"id" gorm:"primaryKey"`
-	APIKeyID        uint `json:"api_key_id" gorm:"not null;index"`
-	ModelRegistryID uint `json:"model_registry_id" gorm:"not null;index"`
-
-	// 路由配置
-	RouteType string `json:"route_type" gorm:"type:varchar(20);default:'random'"` // random, round_robin, weighted
-	Priority  int    `json:"priority" gorm:"default:0"`                           // 优先级
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-
-	APIKey        APIKey        `json:"api_key" gorm:"foreignKey:APIKeyID"`
-	ModelRegistry ModelRegistry `json:"model_registry" gorm:"foreignKey:ModelRegistryID"`
-}
-
-// Conversation 对话记录表
-type Conversation struct {
-	ID        string `json:"id" gorm:"type:varchar(50);primaryKey"` // UUID
-	APIKeyID  uint   `json:"api_key_id" gorm:"not null"`
-	ModelName string `json:"model_name" gorm:"type:varchar(100);not null"`
-
-	// 请求信息
-	RequestID    string `json:"request_id" gorm:"type:varchar(50);index"`
-	UserMessage  string `json:"user_message" gorm:"type:text"`
-	SystemPrompt string `json:"system_prompt" gorm:"type:text"`
-
-	// 响应信息
-	AssistantMessage string `json:"assistant_message" gorm:"type:text"`
-	TokensUsed       int    `json:"tokens_used"`
-	ResponseTime     int64  `json:"response_time"` // 毫秒
-
-	// 敏感信息检测
-	HasSensitiveInfo bool   `json:"has_sensitive_info" gorm:"default:false"`
-	SensitiveTypes   string `json:"sensitive_types" gorm:"type:varchar(500)"` // JSON数组，存储检测到的敏感信息类型
-
-	CreatedAt time.Time `json:"created_at" gorm:"index"`
-	UpdatedAt time.Time `json:"updated_at"`
-
-	APIKey APIKey `json:"api_key" gorm:"foreignKey:APIKeyID"`
-}
-
-// UsageLog 使用日志表（用于异步记录）
-type UsageLog struct {
-	ID           uint      `json:"id" gorm:"primaryKey"`
-	APIKeyID     uint      `json:"api_key_id" gorm:"index"`
-	ModelName    string    `json:"model_name" gorm:"type:varchar(100);index"`
-	TokensUsed   int       `json:"tokens_used"`
-	RequestTime  time.Time `json:"request_time" gorm:"index"`
-	ResponseTime int64     `json:"response_time"`
-	Status       string    `json:"status" gorm:"type:varchar(20)"` // success, error
-	ErrorMessage string    `json:"error_message" gorm:"type:text"`
-
-	CreatedAt time.Time `json:"created_at"`
-}
-
-// BeforeCreate 在创建对话记录前生成UUID
-func (c *Conversation) BeforeCreate(tx *gorm.DB) error {
-	if c.ID == "" {
-		c.ID = uuid.New().String()
-	}
-	return nil
-}
+// ModelRegistry, APIKeyModelMapping, Conversation, UsageLog removed.
+// Gateway is stateless — these storage models belong to the admin service.
 
 // OpenAI 兼容的请求和响应结构
 

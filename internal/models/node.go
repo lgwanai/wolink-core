@@ -2,17 +2,17 @@ package models
 
 import "time"
 
-// Node represents a gateway node in the system
+// Node represents a gateway node - plain struct (GORM tags removed, gateway is stateless)
 type Node struct {
-	ID            string    `gorm:"primaryKey;type:varchar(64)" json:"id"`
-	Hostname      string    `gorm:"type:varchar(255)" json:"hostname"`
-	IP            string    `gorm:"type:varchar(45)" json:"ip"`
-	Status        string    `gorm:"type:varchar(20);default:'offline'" json:"status"` // online, offline, maintenance
-	LastHeartbeat time.Time `gorm:"type:timestamp" json:"last_heartbeat"`
-	ConfigVersion int64     `gorm:"default:0" json:"config_version"`
-	Version       string    `gorm:"type:varchar(50)" json:"version"` // Software version
-	CreatedAt     time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt     time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	ID            string    `json:"id"`
+	Hostname      string    `json:"hostname"`
+	IP            string    `json:"ip"`
+	Status        string    `json:"status"` // online, offline, maintenance
+	LastHeartbeat time.Time `json:"last_heartbeat"`
+	ConfigVersion int64     `json:"config_version"`
+	Version       string    `json:"version"` // Software version
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // NodeMetrics represents real-time metrics for a node
@@ -29,7 +29,4 @@ type NodeStatusWithMetrics struct {
 	Metrics *NodeMetrics `json:"metrics"`
 }
 
-// TableName specifies the table name for Node
-func (Node) TableName() string {
-	return "nodes"
-}
+// TableName removed — Node is no longer a GORM entity (gateway is stateless)
