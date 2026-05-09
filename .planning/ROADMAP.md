@@ -105,7 +105,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Observability | 6/6 | Complete | 2026-04-05 |
 | 4. Testing & Validation | 4/4 | Complete | 2026-04-05 |
 | 5. Admin Auth Refactor | 4/4 | Complete | 2026-04-25 |
-| 6. Stateless Gateway | 0/3 | Planned | — |
+| 6. Stateless Gateway | 1/3 | In Progress | — |
 
 ### Phase 5: wolink-core 网关核心化重构
 
@@ -128,7 +128,7 @@ Plans:
 **Plans:** 3 plans in 3 waves
 
 Plans:
-- [ ] 06-01: Remove database-dependent models, services, and handlers — Wave 1
+- [x] 06-01: Remove database-dependent models, services, and handlers — Wave 1
 - [ ] 06-02: Config-driven auth (APIKeyValidator + AdminSyncService) — Wave 2
 - [ ] 06-03: Wire stateless gateway, finalize entry point, update config — Wave 3
 

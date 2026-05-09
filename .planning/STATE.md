@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-05-05T02:04:29Z"
-last_activity: 2026-05-05 - Phase 7 Plan 03 Complete
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-05-09T15:34:25Z"
+last_activity: 2026-05-09 - Phase 6 Plan 01 Complete
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 24
-  completed_plans: 23
-  percent: 96
+  total_plans: 31
+  completed_plans: 28
+  percent: 90
 ---
 
 # Project State
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Performance-first production readiness. Enable reliable, high-performance AI model access with enterprise security and monitoring capabilities.
-**Current focus:** Phase 7 - OCR Model Support
+**Current focus:** Phase 6 - Stateless Gateway Transformation
 
 ## Current Position
 
-Phase: 7 of 7 (OCR GLM-OCR and PaddleOCR Support)
+Phase: 6 of 7 (Stateless Gateway)
 Status: In Progress
-Last activity: 2026-05-05 - Phase 7 Plan 03 Complete
+Last activity: 2026-05-09 - Phase 6 Plan 01 Complete
 
-Progress: [=========== ] 96%
+Progress: [=========  ] 90%
 
 ## Execution Progress
 
@@ -67,6 +67,9 @@ Progress: [=========== ] 96%
 - **05-03:** AdminTokenAuth & Routes - COMPLETE (AdminTokenAuth middleware, NodeHandler, routes update)
 - **05-04:** Migration & Finalization - COMPLETE (Migration script, tests, docs)
 
+### Phase 6 In Progress
+- **06-01:** Remove database-dependent models, services, and handlers - COMPLETE (GORM models stripped, 3 services deleted, admin handler removed)
+
 ### Phase 7 In Progress
 - **07-01:** GLM-OCR and PaddleOCR Model Configurations - COMPLETE
 - **07-02:** OCR Capability to Plugin System - COMPLETE (OCRPlugin interface, OCR models, CallOCR implementation)
@@ -76,9 +79,9 @@ Progress: [=========== ] 96%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23 (Phase 1: 5, Phase 2: 5, Phase 3: 4, Phase 4: 4, Phase 5: 4, Phase 7: 3)
+- Total plans completed: 28 (Phase 1: 5, Phase 2: 5, Phase 3: 6, Phase 4: 4, Phase 5: 4, Phase 6: 1, Phase 7: 3)
 - Average duration: ~10 min
-- Total execution time: 3 hours
+- Total execution time: ~3.5 hours
 
 **By Phase:**
 
@@ -86,10 +89,11 @@ Progress: [=========== ] 96%
 |-------|-------|-------|--------|
 | 1. Security Foundation | 5/5 | 5 | Complete |
 | 2. Infrastructure Hardening | 5/5 | 5 | Complete |
-| 3. Observability | 4/4 | 4 | Complete |
+| 3. Observability | 6/6 | 6 | Complete |
 | 4. Testing & Validation | 4/4 | 4 | Complete |
 | 5. Admin Auth Refactor | 4/4 | 4 | Complete |
-| 7. OCR GLM-OCR/PaddleOCR | 3/4 | 3 | In Progress |
+| 6. Stateless Gateway | 1/3 | 3 | In Progress |
+| 7. OCR GLM-OCR/PaddleOCR | 3/4 | 4 | In Progress |
 
 ## Test Coverage Summary
 
@@ -142,6 +146,9 @@ Progress: [=========== ] 96%
 - [Phase 07]: OCR handler follows AudioTranscriptions pattern for consistent API design
 - [Phase 07]: OCR route placed after audio endpoints in the v1 group
 - [Phase 07]: CallOCR method uses OCRPlugin interface cast for plugin dispatch
+- [Phase 06]: APIKey.ID field kept (without GORM tag) for AuthService compatibility — Plan 02 will refactor to use KeyID strings
+- [Phase 06]: ModelConfigService uses nil-db transitional pattern — DB ops skipped when db=nil, loads all models from config files
+- [Phase 06]: QueueService/ConversationService/UsageService deleted — conversation recording is no-op in gateway, belongs to admin service
 
 ### Completed Items
 
@@ -155,6 +162,6 @@ None. Phase 7 in progress.
 
 ## Session Continuity
 
-Last session: 2026-05-05T01:55:57Z
-Stopped at: Completed 07-02-PLAN.md
-Status: Phase 7 OCR support in progress. Plugin infrastructure ready, handlers and routes pending.
+Last session: 2026-05-09T15:15:35Z
+Stopped at: Completed 06-01-PLAN.md
+Status: Phase 6 in progress. Gateway compiles stateless — ready for Plan 02 config-driven auth.
