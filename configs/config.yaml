@@ -1,0 +1,81 @@
+server:
+  port: "8080"
+  mode: "debug"
+
+# 节点配置（用于分布式部署）
+node:
+  id: "node-01"  # 节点唯一标识，建议使用环境变量 ${HOSTNAME}
+  region: "cn-east-1"  # 可选：区域标识
+
+# Database is optional — gateway is stateless.
+# Remove or comment out this section when running in pure gateway mode.
+database:
+  type: "postgres"
+  host: "localhost"
+  port: 5432
+  user: "wuliang"
+  password: "lingting"
+  dbname: "wolink_core"
+  sslmode: "disable"
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: "lingting"
+  db: 0
+
+log:
+  level: "info"
+
+security:
+  jwt_secret: "your-super-secret-jwt-key"
+  sensitive_patterns:
+    - '\d{11}'           # 手机号
+    - '\d{18}|\d{15}'    # 身份证号
+    - '\d{16}'           # 银行卡号
+  replacement_patterns:
+    - "[PHONE]"
+    - "[ID_CARD]"
+    - "[BANK_CARD]"
+
+models:
+  config_path: "./configs/models"
+
+communication_log:
+  enabled: false
+  mode: "local"  # local（本地）/ shared（共享NFS）/ disabled
+  storage_path: "./logs/communications"
+  enable_remote_sync: false  # 是否同步到Redis队列（用于集中收集）
+  redis_queue_key: "wolink:comm_logs"
+  max_file_size_mb: 100
+  flush_interval_ms: 1000
+
+# Kafka configuration for async log streaming
+kafka:
+  brokers:
+    - "localhost:9092"
+  topic: "gateway-logs"
+  enabled: true
+
+# Admin management API authentication
+admin:
+  token: "your-admin-token-change-me-in-production"
+
+# Gateway configuration
+gateway:
+  mode: "single"  # "single" (config-driven) or "multi" (admin-synced)
+
+  # Single-node mode: define API keys directly in config
+  api_keys:
+    - key_id: "ak-dev-default"
+      key_secret: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      name: "Default Dev Key"
+      daily_limit: 10000
+      monthly_limit: 300000
+      concurrent_limit: 10
+
+  # Multi-node mode: pull configs from admin master
+  # admin_master:
+  #   url: "http://admin.internal:8080"
+  #   token: "your-admin-token"
+  # sync_interval: "30s"

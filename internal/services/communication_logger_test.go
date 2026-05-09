@@ -3,6 +3,7 @@ package services
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,8 +76,8 @@ func TestCommunicationLogger_Log(t *testing.T) {
 	// Create a test record
 	record := &CommunicationRecord{
 		RequestID:    "test-req-001",
-		APIKeyID:     1,
-		DepartmentID: 1,
+		APIKeyID:     "1",
+		DepartmentID: "1",
 		ModelName:    "gpt-4",
 		IsStream:     false,
 		Request:      json.RawMessage(`{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}`),
@@ -114,7 +115,7 @@ func TestCommunicationLogger_Log(t *testing.T) {
 
 	// Verify record content
 	assert.Equal(t, "test-req-001", parsedRecord.RequestID)
-	assert.Equal(t, uint(1), parsedRecord.APIKeyID)
+	assert.Equal(t, "1", parsedRecord.APIKeyID)
 	assert.Equal(t, "gpt-4", parsedRecord.ModelName)
 	assert.Equal(t, false, parsedRecord.IsStream)
 	assert.Equal(t, 25, parsedRecord.TokensUsed)
@@ -207,8 +208,8 @@ func TestCommunicationLogger_GracefulShutdown(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		record := &CommunicationRecord{
 			RequestID:    "shutdown-test",
-			APIKeyID:     1,
-			DepartmentID: 1,
+		APIKeyID:     "1",
+		DepartmentID: "1",
 			ModelName:    "test-model",
 			Request:      json.RawMessage(`{}`),
 			Response:     json.RawMessage(`{}`),
@@ -246,8 +247,8 @@ func TestCommunicationLogger_BatchWriting(t *testing.T) {
 	for i := 0; i < numRecords; i++ {
 		record := &CommunicationRecord{
 			RequestID:    "batch-test",
-			APIKeyID:     uint(i),
-			DepartmentID: 1,
+			APIKeyID:     fmt.Sprintf("%d", i),
+			DepartmentID: "1",
 			ModelName:    "test-model",
 			Request:      json.RawMessage(`{}`),
 			Response:     json.RawMessage(`{}`),
@@ -321,8 +322,8 @@ func BenchmarkCommunicationLogger_Log(b *testing.B) {
 
 	record := &CommunicationRecord{
 		RequestID:    "bench-test",
-		APIKeyID:     1,
-		DepartmentID: 1,
+		APIKeyID:     "1",
+		DepartmentID: "1",
 		ModelName:    "gpt-4",
 		Request:      json.RawMessage(`{"model":"gpt-4","messages":[]}`),
 		Response:     json.RawMessage(`{"choices":[]}`),
