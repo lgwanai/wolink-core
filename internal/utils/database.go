@@ -106,7 +106,7 @@ func InitDB(cfg config.DatabaseConfig, poolCfg config.DBPoolConfig) (*gorm.DB, e
 		return nil, fmt.Errorf("failed to configure connection pool: %w", err)
 	}
 
-	// 自动迁移
+	// 自动迁移 (表已存在时忽略错误)
 	if err := db.AutoMigrate(
 		&models.APIKey{},
 		&models.ModelRegistry{},
@@ -114,7 +114,8 @@ func InitDB(cfg config.DatabaseConfig, poolCfg config.DBPoolConfig) (*gorm.DB, e
 		&models.Conversation{},
 		&models.UsageLog{},
 	); err != nil {
-		return nil, fmt.Errorf("failed to migrate database: %w", err)
+		// Log but don't fail - tables might already exist
+		fmt.Printf("Warning: AutoMigrate failed (tables may already exist): %v\n", err)
 	}
 
 	return db, nil

@@ -141,7 +141,7 @@ func (qc *QuotaChecker) getDeptBudget(ctx context.Context, deptID string) (budge
 }
 
 // EstimateRequestCost estimates cost based on model and expected tokens
-// For pre-check, we use conservative estimates
+// For pre-check, we use conservative estimates with a minimum base cost
 func (qc *QuotaChecker) EstimateRequestCost(model string, inputTokens int) float64 {
 	// Model pricing per 1M tokens (conservative estimates)
 	// These should come from config in production
@@ -159,6 +159,12 @@ func (qc *QuotaChecker) EstimateRequestCost(model string, inputTokens int) float
 	pricePerMillion, ok := modelPricing[model]
 	if !ok {
 		pricePerMillion = modelPricing["default"]
+	}
+
+	// Minimum estimated tokens for any request (500 tokens minimum)
+	minTokens := 500
+	if inputTokens < minTokens {
+		inputTokens = minTokens
 	}
 
 	// Estimate output tokens (typically 2-4x input for chat)

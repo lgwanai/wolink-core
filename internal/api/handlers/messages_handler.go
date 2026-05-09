@@ -104,20 +104,16 @@ func (h *ChatHandler) Messages(c *gin.Context) {
 		return
 	}
 
-	// 敏感信息检测和替换
+		// 敏感信息检测和替换
 	cleanMessages := make([]models.ChatMessage, len(req.Messages))
 	hasSensitive := false
 	var allSensitiveTypes []string
 
 	for i, msg := range req.Messages {
-		cleanContent, sensitive, sensitiveTypes := h.serviceManager.SecurityService.DetectAndReplaceSensitiveInfo(msg.Content)
+		cleanContent := h.processContentForSensitiveInfo(msg.Content, &hasSensitive, &allSensitiveTypes)
 		cleanMessages[i] = models.ChatMessage{
 			Role:    msg.Role,
 			Content: cleanContent,
-		}
-		if sensitive {
-			hasSensitive = true
-			allSensitiveTypes = append(allSensitiveTypes, sensitiveTypes...)
 		}
 	}
 
@@ -154,7 +150,7 @@ func (h *ChatHandler) handleAnthropicNonStreamRequest(c *gin.Context, req *model
 
 	var assistantMessage string
 	if len(chatResp.Choices) > 0 {
-		assistantMessage = chatResp.Choices[0].Message.Content
+		assistantMessage = h.contentToString(chatResp.Choices[0].Message.Content)
 	}
 
 	go h.recordConversationAsync(apiKey, modelConfig, messages, assistantMessage,

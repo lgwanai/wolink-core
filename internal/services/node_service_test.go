@@ -17,7 +17,7 @@ func TestNodeService_GetStatus(t *testing.T) {
 	logger := logrus.New()
 	version := "test-version"
 
-	svc := NewNodeService(cfg, logger, version)
+	svc := NewNodeService(cfg, logger, version, nil, nil)
 	status := svc.GetStatus()
 
 	if status.Status != "healthy" {
@@ -43,7 +43,7 @@ func TestNodeStatus_Uptime(t *testing.T) {
 	}
 	logger := logrus.New()
 
-	svc := NewNodeService(cfg, logger, "v1.0")
+	svc := NewNodeService(cfg, logger, "v1.0", nil, nil)
 
 	time.Sleep(100 * time.Millisecond)
 	status := svc.GetStatus()
@@ -64,7 +64,7 @@ func TestNodeService_MemoryMetrics(t *testing.T) {
 	}
 	logger := logrus.New()
 
-	svc := NewNodeService(cfg, logger, "v1.0")
+	svc := NewNodeService(cfg, logger, "v1.0", nil, nil)
 	status := svc.GetStatus()
 
 	var m runtime.MemStats
@@ -83,7 +83,7 @@ func TestNewNodeService_StartTime(t *testing.T) {
 	logger := logrus.New()
 
 	beforeCreation := time.Now()
-	svc := NewNodeService(cfg, logger, "v1.0")
+	svc := NewNodeService(cfg, logger, "v1.0", nil, nil)
 	afterCreation := time.Now()
 
 	if svc.startTime.Before(beforeCreation) || svc.startTime.After(afterCreation) {
@@ -97,7 +97,7 @@ func TestNodeService_InitiateRestart_ReturnsNil(t *testing.T) {
 	}
 	logger := logrus.New()
 
-	svc := NewNodeService(cfg, logger, "v1.0")
+	svc := NewNodeService(cfg, logger, "v1.0", nil, nil)
 	err := svc.InitiateRestart()
 
 	if err != nil {

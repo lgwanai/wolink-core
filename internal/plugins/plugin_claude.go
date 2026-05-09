@@ -168,7 +168,9 @@ func (p *ClaudePlugin) buildClaudeRequest(request *models.ChatCompletionRequest,
 	
 	for _, msg := range request.Messages {
 		if msg.Role == "system" {
-			system = msg.Content
+			if contentStr, ok := msg.Content.(string); ok {
+				system = contentStr
+			}
 		} else {
 			messages = append(messages, map[string]interface{}{
 				"role":    msg.Role,

@@ -15,7 +15,7 @@ meta:
     output_modal:
       - text
 conn_config:
-  base_url: "http://127.0.0.1:8099/v1"
+  base_url: "http://127.0.0.1:12345"
   api_key: "lingting"
   model: "GLM-OCR-bf16"
 status: 1

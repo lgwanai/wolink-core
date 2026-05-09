@@ -90,14 +90,10 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 	var allSensitiveTypes []string
 
 	for i, msg := range req.Messages {
-		cleanContent, sensitive, sensitiveTypes := h.serviceManager.SecurityService.DetectAndReplaceSensitiveInfo(msg.Content)
+		cleanContent := h.processContentForSensitiveInfo(msg.Content, &hasSensitive, &allSensitiveTypes)
 		cleanMessages[i] = models.ChatMessage{
 			Role:    msg.Role,
 			Content: cleanContent,
-		}
-		if sensitive {
-			hasSensitive = true
-			allSensitiveTypes = append(allSensitiveTypes, sensitiveTypes...)
 		}
 	}
 
@@ -247,7 +243,7 @@ func (h *ChatHandler) handleNonStreamRequest(c *gin.Context, req *models.ChatCom
 	// 异步记录对话和使用量
 	var assistantMessage string
 	if len(chatResp.Choices) > 0 {
-		assistantMessage = chatResp.Choices[0].Message.Content
+		assistantMessage = h.contentToString(chatResp.Choices[0].Message.Content)
 	}
 
 	go h.recordConversationAsync(apiKey, modelConfig, messages, assistantMessage,
@@ -374,10 +370,28 @@ func (h *ChatHandler) calculateCost(modelConfig *models.ModelConfig, inputTokens
 func (h *ChatHandler) extractUserMessage(messages []models.ChatMessage) string {
 	for _, msg := range messages {
 		if msg.Role == "user" {
-			return msg.Content
+			return h.contentToString(msg.Content)
 		}
 	}
 	return ""
+}
+
+// contentToString converts message content to string for logging
+func (h *ChatHandler) contentToString(content interface{}) string {
+	switch v := content.(type) {
+	case string:
+		return v
+	case []models.MessageContent:
+		var parts []string
+		for _, item := range v {
+			if item.Type == "text" && item.Text != "" {
+				parts = append(parts, item.Text)
+			}
+		}
+		return strings.Join(parts, " ")
+	default:
+		return fmt.Sprintf("%v", content)
+	}
 }
 
 // extractSourceTool extracts the source tool from request context
@@ -435,9 +449,9 @@ func (h *ChatHandler) recordConversationAsync(apiKey *models.APIKey, modelConfig
 	var userMessage, systemPrompt string
 	for _, msg := range messages {
 		if msg.Role == "user" {
-			userMessage = msg.Content
+			userMessage = h.contentToString(msg.Content)
 		} else if msg.Role == "system" {
-			systemPrompt = msg.Content
+			systemPrompt = h.contentToString(msg.Content)
 		}
 	}
 
@@ -491,9 +505,9 @@ func (h *ChatHandler) recordConversationDirect(apiKey *models.APIKey, modelConfi
 	var userMessage, systemPrompt string
 	for _, msg := range messages {
 		if msg.Role == "user" {
-			userMessage = msg.Content
+			userMessage = h.contentToString(msg.Content)
 		} else if msg.Role == "system" {
-			systemPrompt = msg.Content
+			systemPrompt = h.contentToString(msg.Content)
 		}
 	}
 
@@ -864,4 +878,33 @@ func (h *ChatHandler) ListModels(c *gin.Context) {
 		"object": "list",
 		"data":   modelList,
 	})
+}
+
+// processContentForSensitiveInfo 处理多模态内容中的敏感信息
+func (h *ChatHandler) processContentForSensitiveInfo(content interface{}, hasSensitive *bool, sensitiveTypes *[]string) interface{} {
+	switch v := content.(type) {
+	case string:
+		cleanText, sensitive, types := h.serviceManager.SecurityService.DetectAndReplaceSensitiveInfo(v)
+		if sensitive {
+			*hasSensitive = true
+			*sensitiveTypes = append(*sensitiveTypes, types...)
+		}
+		return cleanText
+	case []models.MessageContent:
+		cleanContents := make([]models.MessageContent, len(v))
+		for i, item := range v {
+			cleanContents[i] = item
+			if item.Type == "text" && item.Text != "" {
+				cleanText, sensitive, types := h.serviceManager.SecurityService.DetectAndReplaceSensitiveInfo(item.Text)
+				cleanContents[i].Text = cleanText
+				if sensitive {
+					*hasSensitive = true
+					*sensitiveTypes = append(*sensitiveTypes, types...)
+				}
+			}
+		}
+		return cleanContents
+	default:
+		return content
+	}
 }

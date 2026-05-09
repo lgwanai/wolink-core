@@ -61,6 +61,7 @@ func APIKeyAuth(authService *services.AuthService) gin.HandlerFunc {
 		
 		// 将 API Key 信息存储到上下文
 		c.Set("api_key", apiKey)
+		c.Set("user_id", apiKey.KeyID)
 		
 		c.Next()
 	}

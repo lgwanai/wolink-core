@@ -136,8 +136,21 @@ type ChatCompletionRequest struct {
 }
 
 type ChatMessage struct {
-	Role    string `json:"role" binding:"required,oneof=system user assistant"` // system, user, assistant
-	Content string `json:"content" binding:"required,min=1"`
+	Role    string      `json:"role" binding:"required,oneof=system user assistant"` // system, user, assistant
+	Content interface{} `json:"content" binding:"required"`                           // 可以是string或[]MessageContent(多模态)
+}
+
+// MessageContent 多模态消息内容项
+type MessageContent struct {
+	Type     string           `json:"type" binding:"required,oneof=text image_url"` // text, image_url
+	Text     string           `json:"text,omitempty"`
+	ImageURL *MessageImageURL `json:"image_url,omitempty"`
+}
+
+// MessageImageURL 图片URL配置
+type MessageImageURL struct {
+	URL    string `json:"url" binding:"required"`
+	Detail string `json:"detail,omitempty"` // low, high, auto
 }
 
 type ChatCompletionResponse struct {
