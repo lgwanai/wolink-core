@@ -96,7 +96,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -105,6 +105,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 3. Observability | 6/6 | Complete | 2026-04-05 |
 | 4. Testing & Validation | 4/4 | Complete | 2026-04-05 |
 | 5. Admin Auth Refactor | 4/4 | Complete | 2026-04-25 |
+| 6. Stateless Gateway | 0/3 | Planned | — |
 
 ### Phase 5: wolink-core 网关核心化重构
 
@@ -121,12 +122,15 @@ Plans:
 
 ### Phase 6: 去掉数据库连接相关的业务逻辑，网关不要直接访问数据库，完全使用admin来控制，提供接口
 
-**Goal:** [To be planned]
+**Goal:** Transform gateway into fully stateless operation — no database connection, all config from files (single-node) or admin API sync (multi-node)
 **Depends on:** Phase 5
-**Plans:** 0 plans
+**Requirements:** GW-01, GW-02, GW-03, GW-04, GW-05, GW-06
+**Plans:** 3 plans in 3 waves
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 6 to break down)
+- [ ] 06-01: Remove database-dependent models, services, and handlers — Wave 1
+- [ ] 06-02: Config-driven auth (APIKeyValidator + AdminSyncService) — Wave 2
+- [ ] 06-03: Wire stateless gateway, finalize entry point, update config — Wave 3
 
 ### Phase 7: 增加OCR模型配置支持GLM-OCR和PaddleOCR连接及测试用例
 
