@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -534,4 +537,166 @@ func TestOCR_MissingFile(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "file is required")
+}
+
+func TestOCR_Success(t *testing.T) {
+	// Start mock OCR backend server
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/ocr", r.URL.Path)
+
+		// Verify multipart content type
+		assert.Contains(t, r.Header.Get("Content-Type"), "multipart/form-data")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(models.OCRResponse{
+			Text:     "识别的文本内容",
+			Language: "zh",
+		})
+	}))
+	defer mockServer.Close()
+
+	// Write temporary OCR model config pointing to mock server
+	ocrYAML := fmt.Sprintf(`---
+id: GLM-OCR-bf16
+name: GLM-OCR-bf16
+icon_uri: ""
+icon_url: ""
+description:
+  zh: GLM OCR
+  en: GLM OCR
+default_parameters: []
+meta:
+  protocol: openai
+  capability:
+    function_call: false
+    input_modal: [image]
+    output_modal: [text]
+conn_config:
+  base_url: "%s"
+  api_key: "lingting"
+  model: "GLM-OCR-bf16"
+status: 1
+`, mockServer.URL)
+
+	configPath := filepath.Join("test_configs", "glm-ocr.yaml")
+	err := os.WriteFile(configPath, []byte(ocrYAML), 0644)
+	require.NoError(t, err)
+	defer os.Remove(configPath)
+
+	_, router, cleanup := setupTestChatHandler(t)
+	defer cleanup()
+
+	// Create multipart request with test file
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", "test.png")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("test image content for OCR"))
+	require.NoError(t, err)
+	writer.WriteField("model", "GLM-OCR-bf16")
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/v1/ocr", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("X-API-Key", "test-key-id")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp models.OCRResponse
+	err = json.Unmarshal(w.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.Equal(t, "识别的文本内容", resp.Text)
+	assert.Equal(t, "zh", resp.Language)
+}
+
+func TestOCR_BothModels(t *testing.T) {
+	// Start a single mock OCR backend that handles both models
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/ocr", r.URL.Path)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(models.OCRResponse{
+			Text:     "OCR text result from " + r.FormValue("model"),
+			Language: "en",
+		})
+	}))
+	defer mockServer.Close()
+
+	// Write config files for both OCR models
+	ocrModels := []struct {
+		id     string
+		name   string
+		status int
+	}{
+		{id: "GLM-OCR-bf16", name: "GLM-OCR-bf16", status: 1},
+		{id: "PaddleOCR-VL-1.5", name: "PaddleOCR-VL-1.5", status: 1},
+	}
+
+	for _, m := range ocrModels {
+		yaml := fmt.Sprintf(`---
+id: %s
+name: %s
+icon_uri: ""
+icon_url: ""
+description:
+  zh: %s
+  en: %s
+default_parameters: []
+meta:
+  protocol: openai
+  capability:
+    function_call: false
+    input_modal: [image]
+    output_modal: [text]
+conn_config:
+  base_url: "%s"
+  api_key: "lingting"
+  model: "%s"
+status: %d
+`, m.id, m.name, m.name, m.name, mockServer.URL, m.name, m.status)
+
+		configPath := filepath.Join("test_configs", fmt.Sprintf("%s.yaml", m.id))
+		err := os.WriteFile(configPath, []byte(yaml), 0644)
+		require.NoError(t, err)
+		defer os.Remove(configPath)
+	}
+
+	_, router, cleanup := setupTestChatHandler(t)
+	defer cleanup()
+
+	// Test each model
+	for _, m := range ocrModels {
+		t.Run(m.name, func(t *testing.T) {
+			body := &bytes.Buffer{}
+			writer := multipart.NewWriter(body)
+			part, err := writer.CreateFormFile("file", "test.png")
+			require.NoError(t, err)
+			_, err = part.Write([]byte("test image content"))
+			require.NoError(t, err)
+			writer.WriteField("model", m.name)
+			writer.Close()
+
+			req := httptest.NewRequest("POST", "/v1/ocr", body)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+			req.Header.Set("X-API-Key", "test-key-id")
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+
+			var resp models.OCRResponse
+			err = json.Unmarshal(w.Body.Bytes(), &resp)
+			require.NoError(t, err)
+			assert.Contains(t, resp.Text, m.name)
+			assert.Equal(t, "en", resp.Language)
+		})
+	}
 }
