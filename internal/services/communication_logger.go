@@ -19,8 +19,8 @@ import (
 type CommunicationRecord struct {
 	Timestamp    time.Time       `json:"timestamp"`
 	RequestID    string          `json:"request_id"`
-	APIKeyID     uint            `json:"api_key_id"`
-	DepartmentID uint            `json:"department_id"`
+	APIKeyID     string          `json:"api_key_id"`
+	DepartmentID string          `json:"department_id"`
 	ModelName    string          `json:"model_name"`
 	IsStream     bool            `json:"is_stream"`
 	Request      json.RawMessage `json:"request"`

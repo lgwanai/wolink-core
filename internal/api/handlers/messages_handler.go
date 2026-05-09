@@ -86,7 +86,7 @@ func (h *ChatHandler) Messages(c *gin.Context) {
 	}
 
 	// 根据API Key和模型名称获取可用模型
-	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.ID, req.Model)
+	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.KeyID, req.Model)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

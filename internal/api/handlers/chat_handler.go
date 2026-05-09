@@ -66,7 +66,7 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 	}
 
 	// 根据API Key和模型名称获取可用模型
-	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.ID, req.Model)
+	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.KeyID, req.Model)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -288,7 +288,7 @@ func (h *ChatHandler) logCommunication(
 
 	record := &services.CommunicationRecord{
 		RequestID:    requestID,
-		APIKeyID:     apiKey.ID,
+		APIKeyID:     apiKey.KeyID,
 		ModelName:    modelConfig.Name,
 		IsStream:     isStream,
 		Request:      requestRaw,
@@ -336,7 +336,7 @@ func (h *ChatHandler) publishKafkaLog(
 	// When JWT auth is integrated, these can be populated from claims
 	log := &services.GatewayLog{
 		RequestID:     requestID,
-		UserID:        fmt.Sprintf("apikey:%d", apiKey.ID), // Use API Key ID as user identifier
+		UserID:        fmt.Sprintf("apikey:%s", apiKey.KeyID), // Use API Key ID as user identifier
 		DepartmentID:  "",                                   // To be populated when API Key has department association
 		Model:         modelConfig.Name,
 		Provider:      modelConfig.Protocol, // Use Protocol as provider identifier
@@ -479,7 +479,7 @@ func (h *ChatHandler) Embeddings(c *gin.Context) {
 	}
 
 	// 根据API Key和模型名称获取可用模型
-	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.ID, req.Model)
+	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.KeyID, req.Model)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -540,7 +540,7 @@ func (h *ChatHandler) Rerank(c *gin.Context) {
 	}
 
 	// 根据API Key和模型名称获取可用模型
-	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.ID, req.Model)
+	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.KeyID, req.Model)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -616,7 +616,7 @@ func (h *ChatHandler) AudioTranscriptions(c *gin.Context) {
 	req.File = header
 
 	// 获取可用模型
-	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.ID, req.Model)
+	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.KeyID, req.Model)
 	if err != nil || len(availableModels) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("model %s not available", req.Model)})
 		return
@@ -668,7 +668,7 @@ func (h *ChatHandler) AudioSpeech(c *gin.Context) {
 		RawBody: rawBody,
 	}
 
-	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.ID, req.Model)
+	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.KeyID, req.Model)
 	if err != nil || len(availableModels) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("model %s not available", req.Model)})
 		return
@@ -731,7 +731,7 @@ func (h *ChatHandler) OCR(c *gin.Context) {
 	defer file.Close()
 	req.File = header
 
-	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.ID, req.Model)
+	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.KeyID, req.Model)
 	if err != nil || len(availableModels) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("model %s not available", req.Model)})
 		return
@@ -764,9 +764,9 @@ func (h *ChatHandler) ListModels(c *gin.Context) {
 	apiKeyObj := apiKey.(*models.APIKey)
 
 	// 根据API密钥获取可用的模型列表
-	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyObj.ID, "")
+	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyObj.KeyID, "")
 	if err != nil {
-		h.logger.Errorf("Failed to get models for API key %d: %v", apiKeyObj.ID, err)
+		h.logger.Errorf("Failed to get models for API key %s: %v", apiKeyObj.KeyID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch available models"})
 		return
 	}

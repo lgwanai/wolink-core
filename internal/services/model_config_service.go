@@ -60,7 +60,7 @@ func (s *ModelConfigService) LoadModelConfigs() error {
 // GetModelsByAPIKey 获取可用的模型列表
 // Single-node: loads all models from filesystem config directory
 // Multi-node: uses AdminSyncService cached configs (via APIKeyValidator)
-func (s *ModelConfigService) GetModelsByAPIKey(apiKeyID uint, modelName string) ([]models.ModelConfig, error) {
+func (s *ModelConfigService) GetModelsByAPIKey(apiKeyID string, modelName string) ([]models.ModelConfig, error) {
 	var availableModels []models.ModelConfig
 
 	configPath := s.config.Models.ConfigPath

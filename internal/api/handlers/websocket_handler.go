@@ -38,7 +38,7 @@ func (h *ChatHandler) WebSocketProxy(c *gin.Context) {
 		return
 	}
 
-	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.ID, modelName)
+	availableModels, err := h.serviceManager.ModelConfigService.GetModelsByAPIKey(apiKeyInfo.KeyID, modelName)
 	if err != nil || len(availableModels) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("model %s not available", modelName)})
 		return
