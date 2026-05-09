@@ -35,3 +35,20 @@ security:
 
 models:
   config_path: "./configs/models"
+
+# Admin management API authentication
+admin:
+  token: "your-admin-token-change-me-in-production"
+
+# Gateway configuration
+gateway:
+  mode: "single"  # "single" (config-driven) or "multi" (admin-synced)
+
+  # Single-node mode: define API keys directly in config
+  api_keys:
+    - key_id: "ak-dev-default"
+      key_secret: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      name: "Default Dev Key"
+      daily_limit: 10000
+      monthly_limit: 300000
+      concurrent_limit: 10

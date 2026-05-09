@@ -65,6 +65,22 @@ communication_log:
   max_file_size_mb: 100
   flush_interval_ms: 1000  # 1秒刷新一次
 
+# Admin management API authentication
+admin:
+  token: "${ADMIN_TOKEN}"  # 从环境变量读取，所有节点使用相同token
+
+# Gateway configuration
+gateway:
+  mode: "multi"  # 多节点模式：从管理端同步配置
+
+  # 多节点模式：从管理端(master)通过API拉取配置
+  admin_master:
+    url: "http://admin.internal:8080"  # 管理端地址
+    token: "${ADMIN_TOKEN}"            # 管理端鉴权token
+
+  # 配置同步间隔
+  sync_interval: "30s"
+
 # 基础设施配置 - 多节点需要调整连接池
 infrastructure:
   # 优雅关闭超时
