@@ -441,96 +441,12 @@ func (h *ChatHandler) writeSSEError(c *gin.Context, errorMsg string) {
 }
 
 // recordConversationAsync 使用队列异步记录对话
+// QueueService removed — gateway is stateless, conversation recording belongs to admin service
 func (h *ChatHandler) recordConversationAsync(apiKey *models.APIKey, modelConfig *models.ModelConfig,
 	messages []models.ChatMessage, assistantMessage, requestID string, startTime time.Time,
 	tokensUsed int, hasSensitive bool, sensitiveTypes []string) {
-
-	// 构建用户消息
-	var userMessage, systemPrompt string
-	for _, msg := range messages {
-		if msg.Role == "user" {
-			userMessage = h.contentToString(msg.Content)
-		} else if msg.Role == "system" {
-			systemPrompt = h.contentToString(msg.Content)
-		}
-	}
-
-	// 序列化敏感信息类型
-	sensitiveTypesJSON, _ := json.Marshal(sensitiveTypes)
-
-	// 创建conversation任务
-	conversationTask := &services.ConversationTask{
-		APIKeyID:         apiKey.ID,
-		ModelName:        modelConfig.Name,
-		RequestID:        requestID,
-		UserMessage:      userMessage,
-		SystemPrompt:     systemPrompt,
-		AssistantMessage: assistantMessage,
-		TokensUsed:       tokensUsed,
-		ResponseTime:     time.Since(startTime).Milliseconds(),
-		HasSensitiveInfo: hasSensitive,
-		SensitiveTypes:   string(sensitiveTypesJSON),
-		RequestTime:      startTime,
-	}
-
-	// 加入队列
-	if err := h.serviceManager.QueueService.EnqueueConversation(conversationTask); err != nil {
-		h.logger.Errorf("Failed to enqueue conversation: %v", err)
-		// 降级到直接保存
-		h.recordConversationDirect(apiKey, modelConfig, messages, assistantMessage, requestID, startTime, tokensUsed, hasSensitive, sensitiveTypes)
-	}
-
-	// 同时记录usage_log
-	usageLogTask := &services.UsageLogTask{
-		APIKeyID:     apiKey.ID,
-		ModelName:    modelConfig.Name,
-		TokensUsed:   tokensUsed,
-		RequestTime:  startTime,
-		ResponseTime: time.Since(startTime).Milliseconds(),
-		Status:       "success",
-		ErrorMessage: "",
-	}
-
-	if err := h.serviceManager.QueueService.EnqueueUsageLog(usageLogTask); err != nil {
-		h.logger.Errorf("Failed to enqueue usage log: %v", err)
-	}
-}
-
-// recordConversationDirect 直接记录对话（降级方案）
-func (h *ChatHandler) recordConversationDirect(apiKey *models.APIKey, modelConfig *models.ModelConfig,
-	messages []models.ChatMessage, assistantMessage, requestID string, startTime time.Time,
-	tokensUsed int, hasSensitive bool, sensitiveTypes []string) {
-
-	// 构建用户消息
-	var userMessage, systemPrompt string
-	for _, msg := range messages {
-		if msg.Role == "user" {
-			userMessage = h.contentToString(msg.Content)
-		} else if msg.Role == "system" {
-			systemPrompt = h.contentToString(msg.Content)
-		}
-	}
-
-	// 序列化敏感信息类型
-	sensitiveTypesJSON, _ := json.Marshal(sensitiveTypes)
-
-	conversation := &models.Conversation{
-		APIKeyID:         apiKey.ID,
-		ModelName:        modelConfig.Name,
-		RequestID:        requestID,
-		UserMessage:      userMessage,
-		SystemPrompt:     systemPrompt,
-		AssistantMessage: assistantMessage,
-		TokensUsed:       tokensUsed,
-		ResponseTime:     time.Since(startTime).Milliseconds(),
-		HasSensitiveInfo: hasSensitive,
-		SensitiveTypes:   string(sensitiveTypesJSON),
-	}
-
-	// 直接保存到数据库
-	if err := h.serviceManager.DB.Create(conversation).Error; err != nil {
-		h.logger.Errorf("Failed to save conversation: %v", err)
-	}
+	// Gateway is stateless — conversation and usage recording moved to external admin service
+	h.logger.Debugf("Conversation recording skipped for request %s (gateway is stateless)", requestID)
 }
 
 // Embeddings 处理嵌入请求

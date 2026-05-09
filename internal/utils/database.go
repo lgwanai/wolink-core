@@ -107,12 +107,10 @@ func InitDB(cfg config.DatabaseConfig, poolCfg config.DBPoolConfig) (*gorm.DB, e
 	}
 
 	// 自动迁移 (表已存在时忽略错误)
+	// Note: ModelRegistry, APIKeyModelMapping, Conversation, UsageLog removed.
+	// Gateway is stateless — these storage models belong to admin service.
 	if err := db.AutoMigrate(
 		&models.APIKey{},
-		&models.ModelRegistry{},
-		&models.APIKeyModelMapping{},
-		&models.Conversation{},
-		&models.UsageLog{},
 	); err != nil {
 		// Log but don't fail - tables might already exist
 		fmt.Printf("Warning: AutoMigrate failed (tables may already exist): %v\n", err)

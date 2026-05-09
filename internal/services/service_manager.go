@@ -5,11 +5,9 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 type ServiceManager struct {
-	DB     *gorm.DB
 	Redis  *redis.Client
 	Logger *logrus.Logger
 	Config *config.Config
@@ -17,34 +15,31 @@ type ServiceManager struct {
 	AuthService         *AuthService
 	ModelService        *ModelService
 	ModelConfigService  *ModelConfigService
-	ConversationService *ConversationService
 	SecurityService     *SecurityService
-	UsageService        *UsageService
 	PluginService       *PluginService
-	QueueService        *QueueService
 	CommunicationLogger *CommunicationLogger
 	NodeService         *NodeService
 	KafkaProducer       *KafkaProducer
 	QuotaChecker        *QuotaChecker
 }
 
-func NewServiceManager(db *gorm.DB, rdb *redis.Client, logger *logrus.Logger, cfg *config.Config) *ServiceManager {
+// ConversationService, UsageService, QueueService removed.
+// These database-dependent services belong to the admin service.
+
+func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Config) *ServiceManager {
 	sm := &ServiceManager{
-		DB:     db,
 		Redis:  rdb,
 		Logger: logger,
 		Config: cfg,
 	}
 
-	sm.AuthService = NewAuthService(db, rdb, logger, cfg)
-	sm.ModelService = NewModelService(db, rdb, logger, cfg)
-	sm.ModelConfigService = NewModelConfigService(db, rdb, logger, cfg)
-	sm.ConversationService = NewConversationService(db, rdb, logger, cfg)
+	// Pass nil for db as temporary measure — Plan 02 will fully refactor these services
+	sm.AuthService = NewAuthService(nil, rdb, logger, cfg)
+	sm.ModelService = NewModelService(nil, rdb, logger, cfg)
+	sm.ModelConfigService = NewModelConfigService(nil, rdb, logger, cfg)
 	sm.SecurityService = NewSecurityService(cfg)
-	sm.UsageService = NewUsageService(db, rdb, logger)
 	sm.PluginService = NewPluginService(logger, cfg)
-	sm.QueueService = NewQueueService(db, rdb, logger, cfg)
-	sm.NodeService = NewNodeService(cfg, logger, "dev", db, rdb)
+	sm.NodeService = NewNodeService(cfg, logger, "dev")
 
 	// Initialize communication logger
 	sm.CommunicationLogger = NewCommunicationLogger(
@@ -77,9 +72,6 @@ func NewServiceManager(db *gorm.DB, rdb *redis.Client, logger *logrus.Logger, cf
 func (sm *ServiceManager) Stop() {
 	if sm.KafkaProducer != nil {
 		sm.KafkaProducer.Close()
-	}
-	if sm.QueueService != nil {
-		sm.QueueService.Stop()
 	}
 	if sm.PluginService != nil {
 		sm.PluginService.Stop()

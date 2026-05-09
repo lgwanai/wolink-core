@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"wolink-core/internal/models"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -65,34 +63,15 @@ status: 1
 	require.NoError(t, err)
 	defer os.Remove(filepath.Join(configDir, "qwen-tts.yaml"))
 
-	handler, router, db, cleanup := setupTestChatHandler(t)
+	handler, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	// Need to register AudioSpeech route in test router
 	router.POST("/v1/audio/speech", handler.AudioSpeech)
 
-	// 1. Create a mock TTS model registry
-	ttsModelRegistry := &models.ModelRegistry{
-		ConfigID:   "qwen-tts",
-		Name:       "qwen-tts",
-		ConfigFile: "qwen-tts.yaml",
-	}
-	require.NoError(t, db.Create(ttsModelRegistry).Error)
+	// DB-dependent registry/mapping removed — gateway loads models from config files directly
 
-	// 2. Get the test API key from db
-	var apiKey models.APIKey
-	require.NoError(t, db.First(&apiKey).Error)
-
-	// 3. Map the test API key to the TTS model
-	mapping := &models.APIKeyModelMapping{
-		APIKeyID:        apiKey.ID,
-		ModelRegistryID: ttsModelRegistry.ID,
-		RouteType:       "random",
-		Priority:        0,
-	}
-	require.NoError(t, db.Create(mapping).Error)
-
-	// 4. Send request to our handler
+	// Send request to our handler
 	reqBody := map[string]interface{}{
 		"model": "qwen-tts",
 		"input": map[string]interface{}{
@@ -107,13 +86,10 @@ status: 1
 
 	req, _ := http.NewRequest(http.MethodPost, "/v1/audio/speech", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	// setupTestChatHandler expects X-API-Key to be set or uses context middleware
 	req.Header.Set("X-API-Key", "test-key-id")
 
-	// Add middleware that sets api_key in context (similar to what setupTestChatHandler does)
 	w := httptest.NewRecorder()
 
-	// The middleware in setupTestChatHandler sets api_key if X-API-Key header is present.
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -151,28 +127,10 @@ status: 1
 	require.NoError(t, err)
 	defer os.Remove(filepath.Join(configDir, "qwen-tts.yaml"))
 
-	handler, router, db, cleanup := setupTestChatHandler(t)
+	handler, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	router.POST("/v1/audio/speech", handler.AudioSpeech)
-
-	ttsModelRegistry := &models.ModelRegistry{
-		ConfigID:   "qwen-tts",
-		Name:       "qwen-tts",
-		ConfigFile: "qwen-tts.yaml",
-	}
-	require.NoError(t, db.Create(ttsModelRegistry).Error)
-
-	var apiKey models.APIKey
-	require.NoError(t, db.First(&apiKey).Error)
-
-	mapping := &models.APIKeyModelMapping{
-		APIKeyID:        apiKey.ID,
-		ModelRegistryID: ttsModelRegistry.ID,
-		RouteType:       "random",
-		Priority:        0,
-	}
-	require.NoError(t, db.Create(mapping).Error)
 
 	reqBody := map[string]interface{}{
 		"model": "qwen-tts",

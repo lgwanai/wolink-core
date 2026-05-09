@@ -26,11 +26,8 @@ func main() {
 	// 初始化日志
 	logger := utils.NewLogger(cfg.Log.Level)
 
-	// 初始化数据库
-	db, err := utils.InitDB(cfg.Database, cfg.Infrastructure.Database)
-	if err != nil {
-		logger.Fatalf("Failed to init database: %v", err)
-	}
+	// 数据库初始化已移除 — 网关完全无状态
+	// DB-dependent operations moved to external admin service
 
 	// 初始化 Redis
 	rdb, err := utils.InitRedis(cfg.Redis, cfg.Infrastructure.Redis)
@@ -39,7 +36,7 @@ func main() {
 	}
 
 	// 初始化服务
-	serviceManager := services.NewServiceManager(db, rdb, logger, cfg)
+	serviceManager := services.NewServiceManager(rdb, logger, cfg)
 
 	// 设置 Gin 模式
 	if cfg.Server.Mode == "release" {

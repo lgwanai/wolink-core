@@ -13,8 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 func init() {
@@ -24,30 +22,7 @@ func init() {
 // setupBenchmarkChatHandler creates a ChatHandler with optimized mock services for benchmarking.
 // Returns handler, router, and cleanup function.
 func setupBenchmarkChatHandler() (*ChatHandler, *gin.Engine, func()) {
-	// Setup in-memory SQLite database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		panic(err)
-	}
-
-	// Auto migrate
-	if err := db.AutoMigrate(&models.APIKey{}, &models.ModelRegistry{}, &models.APIKeyModelMapping{}); err != nil {
-		panic(err)
-	}
-
-	// Create test API key
-	apiKey := &models.APIKey{
-		KeyID:            "bench-key-id",
-		KeySecret:        "bench-key-secret",
-		Name:             "Bench Key",
-		Status:           "active",
-		DailyLimit:       1000000,
-		MonthlyLimit:     30000000,
-		ConcurrentLimit:  1000,
-	}
-	if err := db.Create(apiKey).Error; err != nil {
-		panic(err)
-	}
+	// DB removed — gateway is stateless, benchmarks use in-memory configs
 
 	// Setup mock Redis (not used in benchmarks but required by services)
 	rdb := redis.NewClient(&redis.Options{
@@ -70,20 +45,18 @@ func setupBenchmarkChatHandler() (*ChatHandler, *gin.Engine, func()) {
 		},
 	}
 
-	// Create service manager
+	// Create service manager (no DB — gateway is stateless)
 	sm := &services.ServiceManager{
-		DB:     db,
 		Redis:  rdb,
 		Logger: logger,
 		Config: cfg,
 	}
 
-	// Create services
+	// Create services (nil db for transitional state — Plan 02 refactor)
 	sm.SecurityService = services.NewSecurityService(cfg)
-	sm.ModelConfigService = services.NewModelConfigService(db, rdb, logger, cfg)
-	sm.AuthService = services.NewAuthService(db, rdb, logger, cfg)
+	sm.ModelConfigService = services.NewModelConfigService(nil, rdb, logger, cfg)
+	sm.AuthService = services.NewAuthService(nil, rdb, logger, cfg)
 	sm.PluginService = services.NewPluginService(logger, cfg)
-	sm.QueueService = services.NewQueueService(db, rdb, logger, cfg)
 
 	// Stop the plugin watcher to avoid background goroutines
 	sm.PluginService.Stop()
@@ -94,7 +67,17 @@ func setupBenchmarkChatHandler() (*ChatHandler, *gin.Engine, func()) {
 	// Setup router with middleware
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
-		// Pre-configured API key in context
+		// Pre-configured API key in context (no DB — test-only key)
+		apiKey := &models.APIKey{
+			ID:              1,
+			KeyID:           "bench-key-id",
+			KeySecret:       "bench-key-secret",
+			Name:            "Bench Key",
+			Status:          "active",
+			DailyLimit:      1000000,
+			MonthlyLimit:    30000000,
+			ConcurrentLimit: 1000,
+		}
 		c.Set("api_key", apiKey)
 		c.Next()
 	})
@@ -103,8 +86,6 @@ func setupBenchmarkChatHandler() (*ChatHandler, *gin.Engine, func()) {
 	router.GET("/v1/models", handler.ListModels)
 
 	cleanup := func() {
-		sqlDB, _ := db.DB()
-		sqlDB.Close()
 		rdb.Close()
 	}
 

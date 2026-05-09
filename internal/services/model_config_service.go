@@ -60,47 +60,55 @@ func (s *ModelConfigService) LoadModelConfigs() error {
 }
 
 // registerModelConfig 注册模型配置（只存储映射关系）
+// DB registration skipped when db is nil — gateway is stateless, model config from files only
 func (s *ModelConfigService) registerModelConfig(filePath string) error {
 	// 读取配置文件
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
-	
+
 	var configFile models.ModelConfigFile
 	if err := yaml.Unmarshal(data, &configFile); err != nil {
 		return fmt.Errorf("failed to parse YAML: %w", err)
 	}
-	
-	// 只在数据库中存储映射关系
+
 	fileName := filepath.Base(filePath)
-	registry := &models.ModelRegistry{
+
+	// DB registration skipped — gateway is stateless, model configs loaded from files
+	if s.db == nil {
+		s.logger.Debugf("Model config registered from file: %s (ID: %s) — DB sync disabled (stateless mode)", fileName, configFile.ID)
+		return nil
+	}
+
+	// 构建 registry entry
+	registry := struct {
+		ConfigID   string
+		Name       string
+		ConfigFile string
+	}{
 		ConfigID:   configFile.ID,
 		Name:       configFile.Name,
 		ConfigFile: fileName,
 	}
-	
-	// 检查是否已存在
-	var existing models.ModelRegistry
-	result := s.db.Where("config_id = ?", registry.ConfigID).First(&existing)
-	
-	if result.Error == gorm.ErrRecordNotFound {
-		// 创建新记录
-		if err := s.db.Create(registry).Error; err != nil {
+
+	// 检查是否已存在 (uses raw SQL to avoid deleted model types)
+	var existingCount int64
+	s.db.Table("model_registries").Where("config_id = ?", registry.ConfigID).Count(&existingCount)
+
+	if existingCount == 0 {
+		if err := s.db.Table("model_registries").Create(map[string]interface{}{
+			"config_id":   registry.ConfigID,
+			"name":        registry.Name,
+			"config_file": registry.ConfigFile,
+		}).Error; err != nil {
 			return fmt.Errorf("failed to create model registry: %w", err)
 		}
 		s.logger.Infof("Registered new model: %s (ID: %s)", registry.Name, registry.ConfigID)
-	} else if result.Error == nil {
-		// 更新现有记录
-		registry.ID = existing.ID
-		if err := s.db.Save(registry).Error; err != nil {
-			return fmt.Errorf("failed to update model registry: %w", err)
-		}
-		s.logger.Infof("Updated model registry: %s (ID: %s)", registry.Name, registry.ConfigID)
 	} else {
-		return fmt.Errorf("database error: %w", result.Error)
+		s.logger.Infof("Model already registered: %s (ID: %s)", registry.Name, registry.ConfigID)
 	}
-	
+
 	return nil
 }
 
@@ -112,12 +120,13 @@ func (s *ModelConfigService) loadSingleConfig(filePath string) error {
 
 
 // GetModelsByAPIKey 根据API Key获取可用的模型列表（使用缓存）
+// DB-dependent mapping removed — in stateless mode, loads all models from config files
 func (s *ModelConfigService) GetModelsByAPIKey(apiKeyID uint, modelName string) ([]models.ModelConfig, error) {
 	ctx := context.Background()
-	
+
 	// 构建缓存键
 	cacheKey := fmt.Sprintf("api_key_models:%d:%s", apiKeyID, modelName)
-	
+
 	// 先从缓存获取
 	cached := s.redis.Get(ctx, cacheKey)
 	if cached.Err() == nil {
@@ -127,27 +136,27 @@ func (s *ModelConfigService) GetModelsByAPIKey(apiKeyID uint, modelName string) 
 			return cachedModels, nil
 		}
 	}
-	
-	// 缓存未命中，从数据库查询映射关系
-	var mappings []models.APIKeyModelMapping
-	if err := s.db.Where("api_key_id = ?", apiKeyID).Find(&mappings).Error; err != nil {
-		return nil, fmt.Errorf("failed to query mappings: %w", err)
+
+	// DB mapping disabled — gateway is stateless, load from config files directly
+	// Plan 02 will implement config-driven model lookup
+	var availableModels []models.ModelConfig
+
+	// Load all models from config directory (no API key filtering in stateless mode)
+	configPath := s.config.Models.ConfigPath
+	entries, err := os.ReadDir(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config directory: %w", err)
 	}
-	
-	// 手动加载 ModelRegistry
-	for i := range mappings {
-		var registry models.ModelRegistry
-		if err := s.db.First(&registry, mappings[i].ModelRegistryID).Error; err != nil {
-			s.logger.Errorf("Failed to load model registry %d: %v", mappings[i].ModelRegistryID, err)
+
+	for _, entry := range entries {
+		if entry.IsDir() {
 			continue
 		}
-		mappings[i].ModelRegistry = registry
-	}
-	
-	// 根据映射关系从配置文件读取模型信息
-	var availableModels []models.ModelConfig
-	for _, mapping := range mappings {
-		configModel := s.loadModelFromConfigFile(mapping.ModelRegistry.ConfigFile)
+		if !strings.HasSuffix(entry.Name(), ".yaml") && !strings.HasSuffix(entry.Name(), ".yml") {
+			continue
+		}
+
+		configModel := s.loadModelFromConfigFile(entry.Name())
 		if configModel != nil {
 			// 如果指定了模型名称，检查是否匹配
 			if modelName == "" || configModel.Name == modelName {
@@ -155,14 +164,14 @@ func (s *ModelConfigService) GetModelsByAPIKey(apiKeyID uint, modelName string) 
 			}
 		}
 	}
-	
+
 	// 缓存结果（5分钟）
 	if len(availableModels) > 0 {
 		if cacheData, err := json.Marshal(availableModels); err == nil {
 			s.redis.Set(ctx, cacheKey, cacheData, 5*time.Minute)
 		}
 	}
-	
+
 	return availableModels, nil
 }
 

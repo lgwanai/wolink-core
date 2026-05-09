@@ -22,10 +22,9 @@ func SetupRoutes(serviceManager *services.ServiceManager, logger *logrus.Logger,
 	router.Use(observability.ErrorHandler())
 
 	chatHandler := handlers.NewChatHandler(serviceManager, logger)
-	adminHandler := handlers.NewAdminHandler(serviceManager, logger)
 	pluginHandler := handlers.NewPluginHandler(serviceManager, logger)
 	nodeHandler := handlers.NewNodeHandler(serviceManager.NodeService, logger)
-	healthHandler := handlers.NewHealthHandler(serviceManager.DB, serviceManager.Redis)
+	healthHandler := handlers.NewHealthHandler(serviceManager.Redis)
 	metricsHandler := handlers.NewMetricsHandler()
 
 	router.GET("/health", func(c *gin.Context) {
@@ -58,18 +57,8 @@ func SetupRoutes(serviceManager *services.ServiceManager, logger *logrus.Logger,
 		admin.GET("/node/status", nodeHandler.GetStatus)
 		admin.POST("/node/restart", nodeHandler.InitiateRestart)
 
-		admin.POST("/api-keys", adminHandler.CreateAPIKey)
-		admin.GET("/api-keys", adminHandler.ListAPIKeys)
-		admin.PUT("/api-keys/:id", adminHandler.UpdateAPIKey)
-		admin.DELETE("/api-keys/:id", adminHandler.DeleteAPIKey)
-
-		admin.POST("/models", adminHandler.CreateModel)
-		admin.GET("/models", adminHandler.ListModels)
-		admin.PUT("/models/:id", adminHandler.UpdateModel)
-		admin.DELETE("/models/:id", adminHandler.DeleteModel)
-
-		admin.GET("/usage/stats", adminHandler.GetUsageStats)
-		admin.GET("/conversations", adminHandler.ListConversations)
+		// Admin CRUD routes (api-keys, models, usage, conversations) removed.
+		// These operations belong to the external admin service.
 
 		admin.GET("/plugins", pluginHandler.ListPlugins)
 		admin.POST("/plugins/:protocol/reload", pluginHandler.ReloadPlugin)

@@ -21,8 +21,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 func init() {
@@ -67,18 +65,12 @@ func (m *mockPlugin) CallStream(ctx context.Context, config *models.ModelConfig,
 }
 func (m *mockPlugin) HealthCheck(config *models.ModelConfig) bool { return true }
 
-// setupTestChatHandler creates a ChatHandler with mock services
-func setupTestChatHandler(t *testing.T) (*ChatHandler, *gin.Engine, *gorm.DB, func()) {
-	// Setup in-memory SQLite database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-
-	// Auto migrate
-	err = db.AutoMigrate(&models.APIKey{}, &models.ModelRegistry{}, &models.APIKeyModelMapping{})
-	require.NoError(t, err)
-
-	// Create test API key
+// setupTestChatHandler creates a ChatHandler with mock services.
+// DB dependency removed — gateway is stateless.
+func setupTestChatHandler(t *testing.T) (*ChatHandler, *gin.Engine, func()) {
+	// Create test API key (in-memory, no DB)
 	apiKey := &models.APIKey{
+		ID:              1,
 		KeyID:           "test-key-id",
 		KeySecret:       "test-key-secret",
 		Name:            "Test Key",
@@ -87,24 +79,6 @@ func setupTestChatHandler(t *testing.T) (*ChatHandler, *gin.Engine, *gorm.DB, fu
 		MonthlyLimit:    300000,
 		ConcurrentLimit: 10,
 	}
-	require.NoError(t, db.Create(apiKey).Error)
-
-	// Create test model registry
-	modelRegistry := &models.ModelRegistry{
-		ConfigID:   "test-model",
-		Name:       "test-model",
-		ConfigFile: "test-model.yaml",
-	}
-	require.NoError(t, db.Create(modelRegistry).Error)
-
-	// Create API key model mapping
-	mapping := &models.APIKeyModelMapping{
-		APIKeyID:        apiKey.ID,
-		ModelRegistryID: modelRegistry.ID,
-		RouteType:       "random",
-		Priority:        0,
-	}
-	require.NoError(t, db.Create(mapping).Error)
 
 	// Setup mock Redis
 	rdb := redis.NewClient(&redis.Options{
@@ -126,20 +100,18 @@ func setupTestChatHandler(t *testing.T) (*ChatHandler, *gin.Engine, *gorm.DB, fu
 		},
 	}
 
-	// Create service manager
+	// Create service manager (no DB — gateway is stateless)
 	sm := &services.ServiceManager{
-		DB:     db,
 		Redis:  rdb,
 		Logger: logger,
 		Config: cfg,
 	}
 
-	// Create services manually to avoid config file dependencies
+	// Create services manually (nil db for transitional state)
 	sm.SecurityService = services.NewSecurityService(cfg)
-	sm.ModelConfigService = services.NewModelConfigService(db, rdb, logger, cfg)
-	sm.AuthService = services.NewAuthService(db, rdb, logger, cfg)
+	sm.ModelConfigService = services.NewModelConfigService(nil, rdb, logger, cfg)
+	sm.AuthService = services.NewAuthService(nil, rdb, logger, cfg)
 	sm.PluginService = services.NewPluginService(logger, cfg)
-	sm.QueueService = services.NewQueueService(db, rdb, logger, cfg)
 
 	// Create handler
 	handler := NewChatHandler(sm, logger)
@@ -160,17 +132,15 @@ func setupTestChatHandler(t *testing.T) (*ChatHandler, *gin.Engine, *gorm.DB, fu
 	router.POST("/v1/ocr", handler.OCR)
 
 	cleanup := func() {
-		sqlDB, _ := db.DB()
-		sqlDB.Close()
 		rdb.Close()
 	}
 
-	return handler, router, db, cleanup
+	return handler, router, cleanup
 }
 
 func TestChatCompletions_Unauthorized(t *testing.T) {
 	// Test: no API key in context returns 401
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	reqBody := models.ChatCompletionRequest{
@@ -193,7 +163,7 @@ func TestChatCompletions_Unauthorized(t *testing.T) {
 
 func TestChatCompletions_InvalidJSON(t *testing.T) {
 	// Test: invalid JSON body returns 400
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	req, _ := http.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewBuffer([]byte("invalid json")))
@@ -206,18 +176,18 @@ func TestChatCompletions_InvalidJSON(t *testing.T) {
 }
 
 func TestChatCompletions_NoModelsAvailable(t *testing.T) {
-	// Test: no models available for API key returns 400
-	_, _, db, cleanup := setupTestChatHandler(t)
+	// Test: no models available for API key returns 400 (stateless — no DB configs loaded)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
-	// Create a new API key without model mappings
+	// Create a new API key without model mappings (DB removed, test in-memory only)
 	emptyAPIKey := &models.APIKey{
-		KeyID:        "empty-key-id",
-		KeySecret:    "empty-key-secret",
-		Name:         "Empty Key",
-		Status:       "active",
+		ID:              2,
+		KeyID:           "empty-key-id",
+		KeySecret:       "empty-key-secret",
+		Name:            "Empty Key",
+		Status:           "active",
 	}
-	require.NoError(t, db.Create(emptyAPIKey).Error)
 
 	// Setup mock Redis
 	rdb := redis.NewClient(&redis.Options{
@@ -232,20 +202,19 @@ func TestChatCompletions_NoModelsAvailable(t *testing.T) {
 		},
 	}
 
-	// Create service manager with empty API key
+	// Create service manager with empty API key (no DB — stateless)
 	sm := &services.ServiceManager{
-		DB:     db,
 		Redis:  rdb,
 		Logger: logger,
 		Config: cfg,
 	}
-	sm.ModelConfigService = services.NewModelConfigService(db, rdb, logger, cfg)
+	sm.ModelConfigService = services.NewModelConfigService(nil, rdb, logger, cfg)
 
 	// Create handler
 	handler := NewChatHandler(sm, logger)
 
 	// Setup router with middleware
-	router := gin.New()
+	router = gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set("api_key", emptyAPIKey)
 		c.Next()
@@ -274,7 +243,7 @@ func TestChatCompletions_StreamHeaders(t *testing.T) {
 	// Note: Due to the complexity of mocking the full plugin stack,
 	// we verify the handler behavior by checking that streaming is processed
 	// The actual stream handling is tested in plugin tests
-	_, _, _, cleanup := setupTestChatHandler(t)
+	_, _, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	// For this test, we verify the chat_handler.go code path:
@@ -289,7 +258,7 @@ func TestChatCompletions_StreamHeaders(t *testing.T) {
 
 func TestListModels_Unauthorized(t *testing.T) {
 	// Test: no API key returns 401
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	req, _ := http.NewRequest(http.MethodGet, "/v1/models", nil)
@@ -303,7 +272,7 @@ func TestListModels_Unauthorized(t *testing.T) {
 
 func TestListModels_Authorized(t *testing.T) {
 	// Test: valid API key returns model list
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	req, _ := http.NewRequest(http.MethodGet, "/v1/models", nil)
@@ -320,7 +289,7 @@ func TestListModels_Authorized(t *testing.T) {
 
 func TestEmbeddings_Unauthorized(t *testing.T) {
 	// Test: no API key returns 401
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	req, _ := http.NewRequest(http.MethodPost, "/v1/embeddings", bytes.NewBuffer([]byte("{}")))
@@ -335,7 +304,7 @@ func TestEmbeddings_Unauthorized(t *testing.T) {
 
 func TestEmbeddings_Authorized(t *testing.T) {
 	// Test: valid API key returns response
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	reqBody := `{"model": "", "input": "hello"}`
@@ -351,7 +320,7 @@ func TestEmbeddings_Authorized(t *testing.T) {
 
 func TestChatCompletions_MissingRequiredFields(t *testing.T) {
 	// Test: missing required fields returns 400
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	tests := []struct {
@@ -391,7 +360,7 @@ func TestChatCompletions_MissingRequiredFields(t *testing.T) {
 
 func TestChatCompletions_InvalidTemperature(t *testing.T) {
 	// Test: temperature outside valid range returns 400
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	tests := []struct {
@@ -433,7 +402,7 @@ func TestChatCompletions_InvalidTemperature(t *testing.T) {
 
 func TestChatCompletions_InvalidMaxTokens(t *testing.T) {
 	// Test: max_tokens outside valid range returns 400
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	invalidTokens := 0
@@ -455,7 +424,7 @@ func TestChatCompletions_InvalidMaxTokens(t *testing.T) {
 
 func TestChatCompletions_InvalidRole(t *testing.T) {
 	// Test: invalid role returns 400
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	reqBody := map[string]interface{}{
@@ -477,7 +446,7 @@ func TestChatCompletions_InvalidRole(t *testing.T) {
 
 func TestChatCompletions_EmptyContent(t *testing.T) {
 	// Test: empty content returns 400
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	reqBody := models.ChatCompletionRequest{
@@ -501,7 +470,7 @@ func TestChatCompletions_EmptyContent(t *testing.T) {
 
 func TestOCR_Unauthorized(t *testing.T) {
 	// Test: no API key returns 401
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	// Create multipart request
@@ -522,7 +491,7 @@ func TestOCR_Unauthorized(t *testing.T) {
 
 func TestOCR_MissingModel(t *testing.T) {
 	// Test: missing model returns 400
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	// Create multipart request without model
@@ -546,7 +515,7 @@ func TestOCR_MissingModel(t *testing.T) {
 
 func TestOCR_MissingFile(t *testing.T) {
 	// Test: missing file returns 400
-	_, router, _, cleanup := setupTestChatHandler(t)
+	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
 	// Create multipart request without file

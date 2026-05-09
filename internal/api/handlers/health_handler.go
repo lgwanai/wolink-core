@@ -7,13 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
-	"gorm.io/gorm"
 )
-
-// DBHealthChecker defines the interface for database health checks
-type DBHealthChecker interface {
-	PingContext(ctx context.Context) error
-}
 
 // RedisHealthChecker defines the interface for Redis health checks
 type RedisHealthChecker interface {
@@ -21,17 +15,15 @@ type RedisHealthChecker interface {
 }
 
 // HealthHandler handles health and readiness checks
+// DB dependency removed — gateway is stateless
 type HealthHandler struct {
-	db           *gorm.DB
 	redis        *redis.Client
-	dbChecker    DBHealthChecker
 	redisChecker RedisHealthChecker
 }
 
-// NewHealthHandler creates a new HealthHandler with database and redis clients
-func NewHealthHandler(db *gorm.DB, redis *redis.Client) *HealthHandler {
+// NewHealthHandler creates a new HealthHandler with optional Redis client
+func NewHealthHandler(redis *redis.Client) *HealthHandler {
 	return &HealthHandler{
-		db:    db,
 		redis: redis,
 	}
 }
@@ -46,9 +38,8 @@ func (h *HealthHandler) Health(c *gin.Context) {
 }
 
 // Ready returns the readiness status of the server.
-// This endpoint checks if the server can handle requests by verifying
-// database and Redis connectivity.
-// Returns 200 if all dependencies are healthy, 503 otherwise.
+// Only checks Redis connectivity if configured.
+// In single-node mode (no Redis), returns 200 OK immediately.
 func (h *HealthHandler) Ready(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -56,18 +47,13 @@ func (h *HealthHandler) Ready(c *gin.Context) {
 	checks := make(map[string]bool)
 	allHealthy := true
 
-	// Check database connectivity
-	dbHealthy := h.checkDatabase(ctx)
-	checks["database"] = dbHealthy
-	if !dbHealthy {
-		allHealthy = false
-	}
-
-	// Check Redis connectivity
-	redisHealthy := h.checkRedis(ctx)
-	checks["redis"] = redisHealthy
-	if !redisHealthy {
-		allHealthy = false
+	// Check Redis connectivity (only if configured)
+	if h.redis != nil {
+		redisHealthy := h.checkRedis(ctx)
+		checks["redis"] = redisHealthy
+		if !redisHealthy {
+			allHealthy = false
+		}
 	}
 
 	if allHealthy {
@@ -81,26 +67,6 @@ func (h *HealthHandler) Ready(c *gin.Context) {
 			"checks": checks,
 		})
 	}
-}
-
-// checkDatabase verifies database connectivity by pinging the underlying connection
-func (h *HealthHandler) checkDatabase(ctx context.Context) bool {
-	// Use mock checker if available (for testing)
-	if h.dbChecker != nil {
-		return h.dbChecker.PingContext(ctx) == nil
-	}
-
-	// Production path: use the actual gorm.DB
-	if h.db == nil {
-		return false
-	}
-
-	sqlDB, err := h.db.DB()
-	if err != nil {
-		return false
-	}
-
-	return sqlDB.PingContext(ctx) == nil
 }
 
 // checkRedis verifies Redis connectivity by sending a ping command
