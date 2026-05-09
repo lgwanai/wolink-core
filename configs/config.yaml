@@ -42,7 +42,7 @@ models:
   config_path: "./configs/models"
 
 communication_log:
-  enabled: false
+  enabled: true
   mode: "local"  # local（本地）/ shared（共享NFS）/ disabled
   storage_path: "./logs/communications"
   enable_remote_sync: false  # 是否同步到Redis队列（用于集中收集）

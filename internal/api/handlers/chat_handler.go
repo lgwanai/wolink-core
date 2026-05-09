@@ -700,6 +700,8 @@ func (h *ChatHandler) AudioSpeech(c *gin.Context) {
 
 // OCR 处理OCR请求
 func (h *ChatHandler) OCR(c *gin.Context) {
+	startTime := time.Now()
+
 	apiKey, exists := c.Get("api_key")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
@@ -750,6 +752,13 @@ func (h *ChatHandler) OCR(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resp)
+
+	requestRaw, _ := json.Marshal(map[string]string{
+		"model": modelName,
+		"file":  header.Filename,
+	})
+	responseRaw, _ := json.Marshal(resp)
+	h.logCommunication(requestRaw, responseRaw, uuid.New().String(), apiKeyInfo, modelConfig, false, startTime, 0, false, "")
 }
 
 // ListModels 列出可用模型
