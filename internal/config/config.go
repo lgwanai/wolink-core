@@ -92,7 +92,6 @@ type LogConfig struct {
 }
 
 type SecurityConfig struct {
-	JWTSecret           string   `mapstructure:"jwt_secret"`
 	SensitivePatterns   []string `mapstructure:"sensitive_patterns"`
 	ReplacementPatterns []string `mapstructure:"replacement_patterns"`
 }
@@ -200,7 +199,6 @@ func setDefaults() {
 
 	viper.SetDefault("log.level", "info")
 
-	viper.SetDefault("security.jwt_secret", "your-secret-key")
 	viper.SetDefault("security.sensitive_patterns", []string{
 		`\d{11}`,        // 手机号
 		`\d{18}|\d{15}`, // 身份证号

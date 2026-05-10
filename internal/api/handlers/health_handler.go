@@ -48,7 +48,7 @@ func (h *HealthHandler) Ready(c *gin.Context) {
 	allHealthy := true
 
 	// Check Redis connectivity (only if configured)
-	if h.redis != nil {
+	if h.redis != nil || h.redisChecker != nil {
 		redisHealthy := h.checkRedis(ctx)
 		checks["redis"] = redisHealthy
 		if !redisHealthy {

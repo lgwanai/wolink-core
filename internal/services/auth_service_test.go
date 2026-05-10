@@ -119,10 +119,11 @@ func TestCheckRateLimit_ConcurrentLimitExceeded(t *testing.T) {
 
 	apiKey := &models.APIKey{
 		ID:              1,
+		KeyID:           "ak-test123",
 		ConcurrentLimit: 2,
 	}
 
-	concurrentKey := fmt.Sprintf("concurrent:%d", apiKey.ID)
+	concurrentKey := fmt.Sprintf("concurrent:%s", apiKey.KeyID)
 	mr.Set(concurrentKey, "2")
 
 	err := service.CheckRateLimit(apiKey)
@@ -145,15 +146,16 @@ func TestCheckRateLimit_DailyLimitExceeded(t *testing.T) {
 
 	apiKey := &models.APIKey{
 		ID:              1,
+		KeyID:           "ak-test123",
 		DailyLimit:      100,
 		ConcurrentLimit: 10,
 	}
 
-	concurrentKey := fmt.Sprintf("concurrent:%d", apiKey.ID)
+	concurrentKey := fmt.Sprintf("concurrent:%s", apiKey.KeyID)
 	mr.Set(concurrentKey, "1")
 
 	now := time.Now()
-	dailyKey := fmt.Sprintf("daily:%d:%s", apiKey.ID, now.Format("2006-01-02"))
+	dailyKey := fmt.Sprintf("daily:%s:%s", apiKey.KeyID, now.Format("2006-01-02"))
 	mr.Set(dailyKey, "100")
 
 	err := service.CheckRateLimit(apiKey)
@@ -176,19 +178,20 @@ func TestCheckRateLimit_MonthlyLimitExceeded(t *testing.T) {
 
 	apiKey := &models.APIKey{
 		ID:              1,
+		KeyID:           "ak-test123",
 		DailyLimit:      100,
 		MonthlyLimit:    1000,
 		ConcurrentLimit: 10,
 	}
 
-	concurrentKey := fmt.Sprintf("concurrent:%d", apiKey.ID)
+	concurrentKey := fmt.Sprintf("concurrent:%s", apiKey.KeyID)
 	mr.Set(concurrentKey, "1")
 
 	now := time.Now()
-	dailyKey := fmt.Sprintf("daily:%d:%s", apiKey.ID, now.Format("2006-01-02"))
+	dailyKey := fmt.Sprintf("daily:%s:%s", apiKey.KeyID, now.Format("2006-01-02"))
 	mr.Set(dailyKey, "50")
 
-	monthlyKey := fmt.Sprintf("monthly:%d:%s", apiKey.ID, now.Format("2006-01"))
+	monthlyKey := fmt.Sprintf("monthly:%s:%s", apiKey.KeyID, now.Format("2006-01"))
 	mr.Set(monthlyKey, "1000")
 
 	err := service.CheckRateLimit(apiKey)
@@ -211,19 +214,20 @@ func TestCheckRateLimit_AllLimitsPass(t *testing.T) {
 
 	apiKey := &models.APIKey{
 		ID:              1,
+		KeyID:           "ak-test123",
 		DailyLimit:      100,
 		MonthlyLimit:    1000,
 		ConcurrentLimit: 10,
 	}
 
-	concurrentKey := fmt.Sprintf("concurrent:%d", apiKey.ID)
+	concurrentKey := fmt.Sprintf("concurrent:%s", apiKey.KeyID)
 	mr.Set(concurrentKey, "5")
 
 	now := time.Now()
-	dailyKey := fmt.Sprintf("daily:%d:%s", apiKey.ID, now.Format("2006-01-02"))
+	dailyKey := fmt.Sprintf("daily:%s:%s", apiKey.KeyID, now.Format("2006-01-02"))
 	mr.Set(dailyKey, "50")
 
-	monthlyKey := fmt.Sprintf("monthly:%d:%s", apiKey.ID, now.Format("2006-01"))
+	monthlyKey := fmt.Sprintf("monthly:%s:%s", apiKey.KeyID, now.Format("2006-01"))
 	mr.Set(monthlyKey, "500")
 
 	err := service.CheckRateLimit(apiKey)
@@ -243,11 +247,12 @@ func TestRecordUsage(t *testing.T) {
 
 	apiKey := &models.APIKey{
 		ID:           1,
+		KeyID:        "ak-test123",
 		DailyLimit:   100,
 		MonthlyLimit: 1000,
 	}
 
-	concurrentKey := fmt.Sprintf("concurrent:%d", apiKey.ID)
+	concurrentKey := fmt.Sprintf("concurrent:%s", apiKey.KeyID)
 	mr.Set(concurrentKey, "1")
 
 	service.RecordUsage(apiKey, 100)
@@ -255,8 +260,8 @@ func TestRecordUsage(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	now := time.Now()
-	dailyKey := fmt.Sprintf("daily:%d:%s", apiKey.ID, now.Format("2006-01-02"))
-	monthlyKey := fmt.Sprintf("monthly:%d:%s", apiKey.ID, now.Format("2006-01"))
+	dailyKey := fmt.Sprintf("daily:%s:%s", apiKey.KeyID, now.Format("2006-01-02"))
+	monthlyKey := fmt.Sprintf("monthly:%s:%s", apiKey.KeyID, now.Format("2006-01"))
 
 	dailyCount, _ := mr.Get(dailyKey)
 	if dailyCount != "1" {

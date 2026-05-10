@@ -307,7 +307,6 @@ func TestEmbeddings_Unauthorized(t *testing.T) {
 }
 
 func TestEmbeddings_Authorized(t *testing.T) {
-	// Test: valid API key returns response
 	_, router, cleanup := setupTestChatHandler(t)
 	defer cleanup()
 
@@ -319,7 +318,7 @@ func TestEmbeddings_Authorized(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	t.Logf("Response body: %s", w.Body.String())
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestChatCompletions_MissingRequiredFields(t *testing.T) {

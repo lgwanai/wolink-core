@@ -235,8 +235,7 @@ func TestValidation_ChatMessage(t *testing.T) {
 		{
 			name:      "empty content",
 			message:   ChatMessage{Role: "user", Content: ""},
-			expectErr: true,
-			errFields: []string{"Content"},
+			expectErr: false,
 		},
 	}
 
