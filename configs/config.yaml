@@ -4,19 +4,8 @@ server:
 
 # 节点配置（用于分布式部署）
 node:
-  id: "node-01"  # 节点唯一标识，建议使用环境变量 ${HOSTNAME}
-  region: "cn-east-1"  # 可选：区域标识
-
-# Database is optional — gateway is stateless.
-# Remove or comment out this section when running in pure gateway mode.
-database:
-  type: "postgres"
-  host: "localhost"
-  port: 5432
-  user: "wuliang"
-  password: "lingting"
-  dbname: "wolink_core"
-  sslmode: "disable"
+  id: "node-01"
+  region: "cn-east-1"
 
 redis:
   host: "localhost"
@@ -28,7 +17,6 @@ log:
   level: "info"
 
 security:
-  jwt_secret: "your-super-secret-jwt-key"
   sensitive_patterns:
     - '\d{11}'           # 手机号
     - '\d{18}|\d{15}'    # 身份证号
