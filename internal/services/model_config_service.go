@@ -110,6 +110,7 @@ func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *mod
 	return &models.ModelConfig{
 		ID:          configFile.ID,
 		Name:        configFile.Name,
+		Type:        configFile.Type,
 		IconURI:     configFile.IconURI,
 		IconURL:     configFile.IconURL,
 		Description: configFile.Description,

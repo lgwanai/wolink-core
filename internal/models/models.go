@@ -29,19 +29,17 @@ type APIKey struct {
 
 // ModelConfig 运行时模型配置（从配置文件加载）
 type ModelConfig struct {
-	// 基本信息
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	IconURI     string            `json:"icon_uri"`
-	IconURL     string            `json:"icon_url"`
-	Description map[string]string `json:"description"`
-
-	// 元数据
-	Protocol   string            `json:"protocol"`
-	Capability CapabilityConfig  `json:"capability"`
-	ConnConfig ConnectionConfig  `json:"conn_config"`
-	Parameters []ParameterConfig `json:"parameters"`
-	Status     int               `json:"status"`
+	ID          string            `json:"id" yaml:"id"`
+	Name        string            `json:"name" yaml:"name"`
+	Type        string            `json:"type" yaml:"type"` // chat, tts, asr, ocr, embeddings, rerank
+	IconURI     string            `json:"icon_uri" yaml:"icon_uri"`
+	IconURL     string            `json:"icon_url" yaml:"icon_url"`
+	Description map[string]string `json:"description" yaml:"description"`
+	Status      int               `json:"status" yaml:"status"`
+	Protocol    string            `json:"protocol" yaml:"protocol"`
+	Capability  CapabilityConfig  `json:"capability" yaml:"capability"`
+	ConnConfig  ConnectionConfig  `json:"conn_config" yaml:"conn_config"`
+	Parameters  []ParameterConfig `json:"parameters" yaml:"parameters"`
 }
 
 // ModelRegistry, APIKeyModelMapping, Conversation, UsageLog removed.
@@ -282,6 +280,7 @@ type OCRRegion struct {
 type ModelConfigFile struct {
 	ID          string            `yaml:"id"`
 	Name        string            `yaml:"name"`
+	Type        string            `yaml:"type"` // chat, tts, asr, ocr, embeddings, rerank
 	IconURI     string            `yaml:"icon_uri"`
 	IconURL     string            `yaml:"icon_url"`
 	Description map[string]string `yaml:"description"`
