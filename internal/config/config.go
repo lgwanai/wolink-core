@@ -9,7 +9,6 @@ import (
 
 type Config struct {
 	Server           ServerConfig           `mapstructure:"server"`
-	Database         DatabaseConfig         `mapstructure:"database"`
 	Redis            RedisConfig            `mapstructure:"redis"`
 	Log              LogConfig              `mapstructure:"log"`
 	Security         SecurityConfig         `mapstructure:"security"`
@@ -42,17 +41,10 @@ type InfrastructureConfig struct {
 	WriteTimeout      time.Duration   `mapstructure:"write_timeout"`
 	IdleTimeout       time.Duration   `mapstructure:"idle_timeout"`
 	ReadHeaderTimeout time.Duration   `mapstructure:"read_header_timeout"`
-	Database          DBPoolConfig    `mapstructure:"database_pool"`
 	Redis             RedisPoolConfig `mapstructure:"redis_pool"`
 }
 
-// DBPoolConfig holds database connection pool settings.
-type DBPoolConfig struct {
-	MaxOpenConns    int           `mapstructure:"max_open_conns"`
-	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
-	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
-	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time"`
-}
+// DBPoolConfig is removed — gateway is stateless, no database connection.
 
 // RedisPoolConfig holds Redis connection pool settings.
 type RedisPoolConfig struct {
@@ -65,19 +57,6 @@ type RedisPoolConfig struct {
 type ServerConfig struct {
 	Port string `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
-}
-
-type DatabaseConfig struct {
-	Type      string `mapstructure:"type"` // mysql 或 postgres
-	Host      string `mapstructure:"host"`
-	Port      int    `mapstructure:"port"`
-	User      string `mapstructure:"user"`
-	Password  string `mapstructure:"password"`
-	DBName    string `mapstructure:"dbname"`
-	SSLMode   string `mapstructure:"sslmode"`   // 仅用于 PostgreSQL
-	Charset   string `mapstructure:"charset"`   // 仅用于 MySQL
-	ParseTime bool   `mapstructure:"parsetime"` // 仅用于 MySQL
-	Loc       string `mapstructure:"loc"`       // 仅用于 MySQL
 }
 
 type RedisConfig struct {
@@ -181,17 +160,6 @@ func setDefaults() {
 	viper.SetDefault("server.port", "8080")
 	viper.SetDefault("server.mode", "debug")
 
-	viper.SetDefault("database.type", "mysql")
-	viper.SetDefault("database.host", "localhost")
-	viper.SetDefault("database.port", 3306)
-	viper.SetDefault("database.user", "root")
-	viper.SetDefault("database.password", "")
-	viper.SetDefault("database.dbname", "ai_gateway")
-	viper.SetDefault("database.sslmode", "disable")
-	viper.SetDefault("database.charset", "utf8mb4")
-	viper.SetDefault("database.parsetime", true)
-	viper.SetDefault("database.loc", "Local")
-
 	viper.SetDefault("redis.host", "localhost")
 	viper.SetDefault("redis.port", 6379)
 	viper.SetDefault("redis.password", "")
@@ -231,11 +199,6 @@ func setDefaults() {
 	viper.SetDefault("infrastructure.write_timeout", "30s")
 	viper.SetDefault("infrastructure.idle_timeout", "120s")
 	viper.SetDefault("infrastructure.read_header_timeout", "5s")
-
-	// Database pool defaults
-	viper.SetDefault("infrastructure.database_pool.max_open_conns", 25)
-	viper.SetDefault("infrastructure.database_pool.max_idle_conns", 10)
-	viper.SetDefault("infrastructure.database_pool.conn_max_lifetime", "5m")
 
 	// Redis pool defaults
 	viper.SetDefault("infrastructure.redis_pool.pool_size", 20)

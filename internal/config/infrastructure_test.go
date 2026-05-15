@@ -17,7 +17,6 @@ func TestInfrastructureConfig_Unmarshal(t *testing.T) {
 		{
 			name: "InfrastructureConfig unmarshals from YAML correctly",
 			setup: func() {
-				// Set defaults that would normally come from YAML
 				setInfrastructureDefaults()
 			},
 			expected: InfrastructureConfig{
@@ -26,11 +25,6 @@ func TestInfrastructureConfig_Unmarshal(t *testing.T) {
 				WriteTimeout:      30 * time.Second,
 				IdleTimeout:       120 * time.Second,
 				ReadHeaderTimeout: 5 * time.Second,
-				Database: DBPoolConfig{
-					MaxOpenConns:    25,
-					MaxIdleConns:    10,
-					ConnMaxLifetime: 5 * time.Minute,
-				},
 				Redis: RedisPoolConfig{
 					PoolSize:      20,
 					MinIdleConns:   5,
@@ -45,15 +39,11 @@ func TestInfrastructureConfig_Unmarshal(t *testing.T) {
 			tt.setup()
 
 			var infra InfrastructureConfig
-			// Manually unmarshal from viper defaults
 			infra.ShutdownTimeout = getDefaultDuration("infrastructure.shutdown_timeout")
 			infra.ReadTimeout = getDefaultDuration("infrastructure.read_timeout")
 			infra.WriteTimeout = getDefaultDuration("infrastructure.write_timeout")
 			infra.IdleTimeout = getDefaultDuration("infrastructure.idle_timeout")
 			infra.ReadHeaderTimeout = getDefaultDuration("infrastructure.read_header_timeout")
-			infra.Database.MaxOpenConns = getDefaultInt("infrastructure.database_pool.max_open_conns")
-			infra.Database.MaxIdleConns = getDefaultInt("infrastructure.database_pool.max_idle_conns")
-			infra.Database.ConnMaxLifetime = getDefaultDuration("infrastructure.database_pool.conn_max_lifetime")
 			infra.Redis.PoolSize = getDefaultInt("infrastructure.redis_pool.pool_size")
 			infra.Redis.MinIdleConns = getDefaultInt("infrastructure.redis_pool.min_idle_conns")
 			infra.Redis.ConnMaxLifetime = getDefaultDuration("infrastructure.redis_pool.conn_max_lifetime")
@@ -61,19 +51,6 @@ func TestInfrastructureConfig_Unmarshal(t *testing.T) {
 			assert.Equal(t, tt.expected, infra)
 		})
 	}
-}
-
-func TestDBPoolConfig_Defaults(t *testing.T) {
-	setInfrastructureDefaults()
-
-	var db DBPoolConfig
-	db.MaxOpenConns = getDefaultInt("infrastructure.database_pool.max_open_conns")
-	db.MaxIdleConns = getDefaultInt("infrastructure.database_pool.max_idle_conns")
-	db.ConnMaxLifetime = getDefaultDuration("infrastructure.database_pool.conn_max_lifetime")
-
-	assert.Equal(t, 25, db.MaxOpenConns, "MaxOpenConns default should be 25")
-	assert.Equal(t, 10, db.MaxIdleConns, "MaxIdleConns default should be 10")
-	assert.Equal(t, 5*time.Minute, db.ConnMaxLifetime, "ConnMaxLifetime default should be 5m")
 }
 
 func TestRedisPoolConfig_Defaults(t *testing.T) {
@@ -126,16 +103,12 @@ func TestInfrastructureConfig_DurationParsing(t *testing.T) {
 	}
 }
 
-// Helper functions for testing defaults
 func setInfrastructureDefaults() {
 	viper.SetDefault("infrastructure.shutdown_timeout", "30s")
 	viper.SetDefault("infrastructure.read_timeout", "15s")
 	viper.SetDefault("infrastructure.write_timeout", "30s")
 	viper.SetDefault("infrastructure.idle_timeout", "120s")
 	viper.SetDefault("infrastructure.read_header_timeout", "5s")
-	viper.SetDefault("infrastructure.database_pool.max_open_conns", 25)
-	viper.SetDefault("infrastructure.database_pool.max_idle_conns", 10)
-	viper.SetDefault("infrastructure.database_pool.conn_max_lifetime", "5m")
 	viper.SetDefault("infrastructure.redis_pool.pool_size", 20)
 	viper.SetDefault("infrastructure.redis_pool.min_idle_conns", 5)
 	viper.SetDefault("infrastructure.redis_pool.conn_max_lifetime", "5m")
