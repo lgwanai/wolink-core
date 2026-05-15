@@ -107,10 +107,11 @@ func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *mod
 	}
 
 	// 转换为运行时模型配置
-	return &models.ModelConfig{
+	model := &models.ModelConfig{
 		ID:          configFile.ID,
 		Name:        configFile.Name,
 		Type:        configFile.Type,
+		Mode:        configFile.Mode,
 		IconURI:     configFile.IconURI,
 		IconURL:     configFile.IconURL,
 		Description: configFile.Description,
@@ -120,6 +121,10 @@ func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *mod
 		Parameters:  configFile.Parameters,
 		Status:      configFile.Status,
 	}
+	if model.Mode == "" {
+		model.Mode = "parsed"
+	}
+	return model
 }
 
 // SelectModelByRoute 根据路由规则选择模型

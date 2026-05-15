@@ -32,6 +32,7 @@ type ModelConfig struct {
 	ID          string            `json:"id" yaml:"id"`
 	Name        string            `json:"name" yaml:"name"`
 	Type        string            `json:"type" yaml:"type"` // chat, tts, asr, ocr, embeddings, rerank
+	Mode        string            `json:"mode" yaml:"mode"` // passthrough, parsed
 	IconURI     string            `json:"icon_uri" yaml:"icon_uri"`
 	IconURL     string            `json:"icon_url" yaml:"icon_url"`
 	Description map[string]string `json:"description" yaml:"description"`
@@ -281,6 +282,7 @@ type ModelConfigFile struct {
 	ID          string            `yaml:"id"`
 	Name        string            `yaml:"name"`
 	Type        string            `yaml:"type"` // chat, tts, asr, ocr, embeddings, rerank
+	Mode        string            `yaml:"mode"` // passthrough, parsed
 	IconURI     string            `yaml:"icon_uri"`
 	IconURL     string            `yaml:"icon_url"`
 	Description map[string]string `yaml:"description"`

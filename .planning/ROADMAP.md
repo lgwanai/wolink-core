@@ -144,3 +144,12 @@ Plans:
 - [ ] 07-02: Add OCRPlugin interface and OpenAI plugin implementation - Wave 1
 - [ ] 07-03: Add OCR handler, route, and service method - Wave 2
 - [ ] 07-04: Write comprehensive OCR tests and verify with test image - Wave 3
+
+### Phase 8: 模型透传/解析双模式 - 模型颗粒度配置 passthrough/parsed 模式
+
+**Goal:** [To be planned]
+**Depends on:** Phase 7
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 8 to break down)

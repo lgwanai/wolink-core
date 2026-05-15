@@ -84,6 +84,11 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
+	if IsPassthrough(modelConfig) {
+		ProxyRequest(c, modelConfig)
+		return
+	}
+
 	// 敏感信息检测和替换
 	cleanMessages := make([]models.ChatMessage, len(req.Messages))
 	hasSensitive := false
@@ -497,6 +502,11 @@ func (h *ChatHandler) Embeddings(c *gin.Context) {
 		return
 	}
 
+	if IsPassthrough(modelConfig) {
+		ProxyRequest(c, modelConfig)
+		return
+	}
+
 	// 调用模型
 	resp, err := h.serviceManager.PluginService.CallEmbedding(c.Request.Context(), modelConfig, &req)
 	if err != nil {
@@ -510,7 +520,6 @@ func (h *ChatHandler) Embeddings(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// Rerank 处理 Rerank 请求
 func (h *ChatHandler) Rerank(c *gin.Context) {
 	// 获取API Key信息
 	apiKey, exists := c.Get("api_key")
@@ -555,6 +564,11 @@ func (h *ChatHandler) Rerank(c *gin.Context) {
 	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels, "random")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if IsPassthrough(modelConfig) {
+		ProxyRequest(c, modelConfig)
 		return
 	}
 
@@ -627,6 +641,11 @@ func (h *ChatHandler) AudioTranscriptions(c *gin.Context) {
 		return
 	}
 
+	if IsPassthrough(modelConfig) {
+		ProxyRequest(c, modelConfig)
+		return
+	}
+
 	resp, err := h.serviceManager.PluginService.CallAudioTranscription(c.Request.Context(), modelConfig, &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -676,6 +695,11 @@ func (h *ChatHandler) AudioSpeech(c *gin.Context) {
 	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels, "random")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if IsPassthrough(modelConfig) {
+		ProxyRequest(c, modelConfig)
 		return
 	}
 
@@ -742,6 +766,11 @@ func (h *ChatHandler) OCR(c *gin.Context) {
 	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels, "random")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if IsPassthrough(modelConfig) {
+		ProxyRequest(c, modelConfig)
 		return
 	}
 
