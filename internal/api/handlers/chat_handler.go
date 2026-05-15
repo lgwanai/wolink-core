@@ -320,8 +320,8 @@ func (h *ChatHandler) publishKafkaLog(
 	status string,
 	maskedPrompt string,
 ) {
-	if h.serviceManager.KafkaProducer == nil {
-		return // Kafka logging disabled
+	if h.serviceManager.GatewayLog == nil {
+		return // Gateway logging disabled
 	}
 
 	// Extract source tool from request headers
@@ -357,8 +357,8 @@ func (h *ChatHandler) publishKafkaLog(
 	}
 
 	// Publish asynchronously - errors logged but don't fail request
-	if err := h.serviceManager.KafkaProducer.PublishLog(c.Request.Context(), log); err != nil {
-		h.logger.WithError(err).WithField("request_id", requestID).Error("Failed to publish log to Kafka")
+	if err := h.serviceManager.GatewayLog.PublishLog(c.Request.Context(), log); err != nil {
+		h.logger.WithError(err).WithField("request_id", requestID).Error("Failed to publish gateway log")
 	}
 }
 

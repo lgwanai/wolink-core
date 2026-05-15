@@ -88,9 +88,11 @@ infrastructure:
     conn_max_lifetime: "5m" # 连接最大存活时间
     pool_timeout: "30s"     # 获取连接超时时间
 
-# Kafka配置 - 用于异步日志流
-kafka:
+# Gateway operational log
+gateway_log:
+  mode: "kafka"           # "local" or "kafka"
+  storage_path: "./logs/gateway"
+  enabled: true
   brokers:
-    - "kafka-cluster.internal:9092"  # Kafka集群地址
-  topic: "gateway-logs"              # 日志主题
-  enabled: true                      # 生产环境建议开启
+    - "kafka-cluster.internal:9092"
+  topic: "gateway-logs"

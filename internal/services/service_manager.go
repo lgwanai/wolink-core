@@ -19,7 +19,7 @@ type ServiceManager struct {
 	PluginService       *PluginService
 	CommunicationLogger *CommunicationLogger
 	NodeService         *NodeService
-	KafkaProducer       *KafkaProducer
+	GatewayLog          *GatewayLogService
 	QuotaChecker        *QuotaChecker
 	AdminSyncService    *AdminSyncService
 }
@@ -49,12 +49,12 @@ func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Con
 		logger.Errorf,
 	)
 
-	// Initialize Kafka producer for async log streaming
-	kafkaProducer, err := NewKafkaProducer(cfg, logger)
+	// Initialize gateway log service (local or Kafka)
+	gatewayLog, err := NewGatewayLogService(&cfg.GatewayLog, logger)
 	if err != nil {
-		logger.Errorf("Failed to initialize Kafka producer: %v", err)
+		logger.Errorf("Failed to initialize gateway log service: %v", err)
 	}
-	sm.KafkaProducer = kafkaProducer
+	sm.GatewayLog = gatewayLog
 
 	// Initialize QuotaChecker for quota enforcement
 	sm.QuotaChecker = NewQuotaChecker(rdb, logger, cfg)
@@ -82,8 +82,8 @@ func (sm *ServiceManager) Stop() {
 		sm.AdminSyncService.StopSync()
 		sm.Logger.Info("AdminSyncService stopped")
 	}
-	if sm.KafkaProducer != nil {
-		sm.KafkaProducer.Close()
+	if sm.GatewayLog != nil {
+		sm.GatewayLog.Close()
 	}
 	if sm.PluginService != nil {
 		sm.PluginService.Stop()

@@ -17,15 +17,18 @@ type Config struct {
 	CommunicationLog CommunicationLogConfig `mapstructure:"communication_log"`
 	Node             NodeConfig             `mapstructure:"node"`
 	Admin            AdminConfig            `mapstructure:"admin"`
-	Kafka            KafkaConfig            `mapstructure:"kafka"`
+	GatewayLog       GatewayLogConfig       `mapstructure:"gateway_log"`
 	Gateway          GatewayConfig          `mapstructure:"gateway"`
 }
 
-// KafkaConfig holds Kafka producer configuration for async log streaming
-type KafkaConfig struct {
-	Brokers []string `mapstructure:"brokers"`
-	Topic   string   `mapstructure:"topic"`
-	Enabled bool     `mapstructure:"enabled"`
+// GatewayLogConfig holds gateway operational log configuration.
+// Supports local file storage and Kafka streaming.
+type GatewayLogConfig struct {
+	Mode        string   `mapstructure:"mode"` // "local" or "kafka"
+	StoragePath string   `mapstructure:"storage_path"`
+	Brokers     []string `mapstructure:"brokers"`
+	Topic       string   `mapstructure:"topic"`
+	Enabled     bool     `mapstructure:"enabled"`
 }
 
 // AdminConfig holds admin API authentication settings
@@ -208,10 +211,12 @@ func setDefaults() {
 	// Admin defaults
 	viper.SetDefault("admin.token", "")
 
-	// Kafka defaults
-	viper.SetDefault("kafka.brokers", []string{"localhost:9092"})
-	viper.SetDefault("kafka.topic", "gateway-logs")
-	viper.SetDefault("kafka.enabled", false)
+	// Gateway log defaults
+	viper.SetDefault("gateway_log.mode", "local")
+	viper.SetDefault("gateway_log.storage_path", "./logs/gateway")
+	viper.SetDefault("gateway_log.brokers", []string{"localhost:9092"})
+	viper.SetDefault("gateway_log.topic", "gateway-logs")
+	viper.SetDefault("gateway_log.enabled", true)
 
 	// Gateway defaults - database is optional, gateway can run without it
 	viper.SetDefault("gateway.mode", "single")

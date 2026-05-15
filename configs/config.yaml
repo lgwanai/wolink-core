@@ -38,12 +38,16 @@ communication_log:
   max_file_size_mb: 100
   flush_interval_ms: 1000
 
-# Kafka configuration for async log streaming
-kafka:
-  brokers:
-    - "localhost:9092"
-  topic: "gateway-logs"
+# Gateway operational log (request metrics, security events)
+gateway_log:
+  mode: "local"      # "local" (file) or "kafka"
+  storage_path: "./logs/gateway"
   enabled: true
+
+  # Kafka mode settings (ignored when mode is "local")
+  # brokers:
+  #   - "localhost:9092"
+  # topic: "gateway-logs"
 
 # Admin management API authentication
 admin:
