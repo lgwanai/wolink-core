@@ -7,7 +7,8 @@ route: fastest
 probe:
   enabled: true
   interval: "30s"
-  endpoint: "/v1/health"
+  endpoint: "/v1/chat/completions"
+  test_prompt: "hello"
 icon_uri: default_icon/chat.png
 description:
   zh: 对话模型示例

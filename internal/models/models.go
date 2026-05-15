@@ -46,9 +46,10 @@ type ModelConfig struct {
 }
 
 type ProbeConfig struct {
-	Enabled  bool   `json:"enabled" yaml:"enabled"`
-	Interval string `json:"interval" yaml:"interval"` // e.g. "30s"
-	Endpoint string `json:"endpoint" yaml:"endpoint"` // e.g. "/v1/health"
+	Enabled    bool   `json:"enabled" yaml:"enabled"`
+	Interval   string `json:"interval" yaml:"interval"`   // e.g. "30s"
+	Endpoint   string `json:"endpoint" yaml:"endpoint"`   // e.g. "/v1/chat/completions"
+	TestPrompt string `json:"test_prompt" yaml:"test_prompt"` // e.g. "hello"
 }
 
 // ModelRegistry, APIKeyModelMapping, Conversation, UsageLog removed.

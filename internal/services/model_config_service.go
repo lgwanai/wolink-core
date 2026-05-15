@@ -153,8 +153,13 @@ func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *mod
 	if model.Route == "" {
 		model.Route = "random"
 	}
-	if model.Probe.Interval == "" {
-		model.Probe.Interval = "30s"
+	if model.Probe.Enabled {
+		if model.Probe.Interval == "" {
+			model.Probe.Interval = "30s"
+		}
+		if model.Probe.Endpoint == "" {
+			model.Probe.Endpoint = "/v1/chat/completions"
+		}
 	}
 	return model
 }

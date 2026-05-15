@@ -1,6 +1,8 @@
 package services
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -75,31 +77,64 @@ func (s *ProbeService) probeLoop(m models.ModelConfig) {
 		interval = 30 * time.Second
 	}
 
-	url := fmt.Sprintf("%s%s", m.ConnConfig.BaseURL, m.Probe.Endpoint)
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	s.probeOne(m.ID, url)
+	s.probeModel(m)
 
 	for {
 		select {
 		case <-s.stopCh:
 			return
 		case <-ticker.C:
-			s.probeOne(m.ID, url)
+			s.probeModel(m)
 		}
 	}
 }
 
-func (s *ProbeService) probeOne(modelID, url string) {
+func (s *ProbeService) probeModel(m models.ModelConfig) {
+	prompt := m.Probe.TestPrompt
+	if prompt == "" {
+		prompt = "hello"
+	}
+
+	endpoint := m.Probe.Endpoint
+	if endpoint == "" {
+		endpoint = "/v1/chat/completions"
+	}
+
+	url := fmt.Sprintf("%s%s", m.ConnConfig.BaseURL, endpoint)
+
+	body := map[string]interface{}{
+		"model": m.ConnConfig.Model,
+		"messages": []map[string]string{
+			{"role": "user", "content": prompt},
+		},
+		"stream": false,
+		"max_tokens": 10,
+	}
+	data, _ := json.Marshal(body)
+
 	start := time.Now()
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(data))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if m.ConnConfig.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+m.ConnConfig.APIKey)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 	io.Copy(io.Discard, resp.Body)
-	s.latencyRec(modelID, time.Since(start))
+
+	if resp.StatusCode == http.StatusOK {
+		s.latencyRec(m.ID, time.Since(start))
+	}
 }
 
 func (s *ProbeService) Running() bool {
