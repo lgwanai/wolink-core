@@ -98,11 +98,7 @@ func (s *ProbeService) probeModel(m models.ModelConfig) {
 		prompt = "hello"
 	}
 
-	endpoint := m.Probe.Endpoint
-	if endpoint == "" {
-		endpoint = "/v1/chat/completions"
-	}
-
+	endpoint := probeEndpointForType(m.Type)
 	url := fmt.Sprintf("%s%s", m.ConnConfig.BaseURL, endpoint)
 
 	body := map[string]interface{}{
@@ -141,4 +137,21 @@ func (s *ProbeService) Running() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.running
+}
+
+func probeEndpointForType(modelType string) string {
+	switch modelType {
+	case "tts":
+		return "/v1/audio/speech"
+	case "asr":
+		return "/v1/audio/transcriptions"
+	case "ocr":
+		return "/v1/ocr"
+	case "embeddings":
+		return "/v1/embeddings"
+	case "rerank":
+		return "/v1/rerank"
+	default:
+		return "/v1/chat/completions"
+	}
 }
