@@ -36,6 +36,10 @@ func (s *AuthService) ValidateAPIKey(keyID string) (*models.APIKey, error) {
 
 // CheckRateLimit 检查速率限制 (Redis-based, no DB)
 func (s *AuthService) CheckRateLimit(apiKey *models.APIKey) error {
+	if s.redis == nil {
+		return nil
+	}
+
 	ctx := context.Background()
 	now := time.Now()
 
@@ -75,6 +79,9 @@ func (s *AuthService) CheckRateLimit(apiKey *models.APIKey) error {
 
 // RecordUsage 记录使用量（异步，Redis counters only - no DB writes）
 func (s *AuthService) RecordUsage(apiKey *models.APIKey, tokensUsed int) {
+	if s.redis == nil {
+		return
+	}
 	go func() {
 		ctx := context.Background()
 		now := time.Now()
