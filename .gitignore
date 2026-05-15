@@ -57,3 +57,4 @@ word_timestamps.json
 dump.rdb
 server
 *.test
+wolink-cli
