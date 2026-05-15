@@ -22,7 +22,8 @@ type ModelConfigService struct {
 	config *config.Config
 
 	mu        sync.Mutex
-	rrCount   map[string]uint64 // round-robin counter per model name
+	rrCount   map[string]uint64
+	models    []models.ModelConfig
 
 	latencyTracker *LatencyTracker
 }
@@ -66,7 +67,7 @@ func NewModelConfigService(logger *logrus.Logger, cfg *config.Config) *ModelConf
 	}
 }
 
-// LoadModelConfigs 扫描配置文件并验证可解析性（filesystem only, no DB）
+// LoadModelConfigs 扫描配置文件并加载所有模型（filesystem only, no DB）
 func (s *ModelConfigService) LoadModelConfigs() error {
 	configPath := s.config.Models.ConfigPath
 
@@ -79,53 +80,36 @@ func (s *ModelConfigService) LoadModelConfigs() error {
 			return nil
 		}
 
-		// Validate the config file is parseable
-		data, err := os.ReadFile(path)
-		if err != nil {
-			s.logger.Errorf("Failed to read %s: %v", path, err)
-			return nil
+		cfgModel := s.loadModelFromConfigFile(d.Name())
+		if cfgModel != nil {
+			s.mu.Lock()
+			s.models = append(s.models, *cfgModel)
+			s.mu.Unlock()
+			s.logger.Infof("Loaded model config: %s (ID: %s)", cfgModel.Name, cfgModel.ID)
 		}
-
-		var configFile models.ModelConfigFile
-		if err := yaml.Unmarshal(data, &configFile); err != nil {
-			s.logger.Errorf("Failed to parse %s: %v", path, err)
-			return nil
-		}
-
-		s.logger.Infof("Loaded model config: %s (ID: %s)", configFile.Name, configFile.ID)
 		return nil
 	})
 }
 
-// GetModelsByAPIKey 获取可用的模型列表
-// Single-node: loads all models from filesystem config directory
-// Multi-node: uses AdminSyncService cached configs (via APIKeyValidator)
+// GetModelsByAPIKey 从已加载的模型列表中过滤出可用模型
 func (s *ModelConfigService) GetModelsByAPIKey(apiKeyID string, modelName string) ([]models.ModelConfig, error) {
+	s.mu.Lock()
+	needLoad := len(s.models) == 0
+	s.mu.Unlock()
+
+	if needLoad {
+		s.LoadModelConfigs()
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	var availableModels []models.ModelConfig
-
-	configPath := s.config.Models.ConfigPath
-	entries, err := os.ReadDir(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config directory: %w", err)
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		if !strings.HasSuffix(entry.Name(), ".yaml") && !strings.HasSuffix(entry.Name(), ".yml") {
-			continue
-		}
-
-		configModel := s.loadModelFromConfigFile(entry.Name())
-		if configModel != nil {
-			// 如果指定了模型名称，检查是否匹配
-			if modelName == "" || configModel.Name == modelName {
-				availableModels = append(availableModels, *configModel)
-			}
+	for _, configModel := range s.models {
+		if modelName == "" || configModel.Name == modelName {
+			availableModels = append(availableModels, configModel)
 		}
 	}
-
 	return availableModels, nil
 }
 
@@ -175,26 +159,35 @@ func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *mod
 	return model
 }
 
+// GetAllModels 返回所有已加载的模型配置
+func (s *ModelConfigService) GetAllModels() []models.ModelConfig {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	result := make([]models.ModelConfig, len(s.models))
+	copy(result, s.models)
+	return result
+}
+
 // SelectModelByRoute 根据模型配置中的路由规则选择模型
-func (s *ModelConfigService) SelectModelByRoute(models []models.ModelConfig) (*models.ModelConfig, error) {
-	if len(models) == 0 {
+func (s *ModelConfigService) SelectModelByRoute(configs []models.ModelConfig) (*models.ModelConfig, error) {
+	if len(configs) == 0 {
 		return nil, fmt.Errorf("no models available")
 	}
 
-	if len(models) == 1 {
-		return &models[0], nil
+	if len(configs) == 1 {
+		return &configs[0], nil
 	}
 
-	routeType := models[0].Route
+	routeType := configs[0].Route
 	switch routeType {
 	case "random":
-		return s.selectRandom(models)
+		return s.selectRandom(configs)
 	case "balance":
-		return s.selectBalance(models)
+		return s.selectBalance(configs)
 	case "fastest":
-		return s.selectFastest(models)
+		return s.selectFastest(configs)
 	default:
-		return s.selectRandom(models)
+		return s.selectRandom(configs)
 	}
 }
 

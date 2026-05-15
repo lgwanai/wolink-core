@@ -23,6 +23,7 @@ type ServiceManager struct {
 	TokenTracker        *TokenTracker
 	QuotaChecker        *QuotaChecker
 	AdminSyncService    *AdminSyncService
+	ProbeService        *ProbeService
 }
 
 func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Config, pc *config.PluginConfigs) *ServiceManager {
@@ -70,6 +71,11 @@ func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Con
 		logger.Errorf("Failed to load model configs: %v", err)
 	}
 
+	// 启动心跳探活（路由模式为 fastest 的模型）
+	models := sm.ModelConfigService.GetAllModels()
+	sm.ProbeService = NewProbeService(logger, models, sm.ModelConfigService.RecordLatency)
+	sm.ProbeService.Start()
+
 	return sm
 }
 
@@ -86,6 +92,9 @@ func (sm *ServiceManager) Stop() {
 	}
 	if sm.CommunicationLogger != nil {
 		sm.CommunicationLogger.Close()
+	}
+	if sm.ProbeService != nil {
+		sm.ProbeService.Stop()
 	}
 	if sm.TokenTracker != nil {
 		sm.TokenTracker.Close()
