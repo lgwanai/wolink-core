@@ -153,6 +153,7 @@ func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *mod
 		Type:        configFile.Type,
 		Mode:        configFile.Mode,
 		Route:       configFile.Route,
+		Probe:       configFile.Probe,
 		IconURI:     configFile.IconURI,
 		IconURL:     configFile.IconURL,
 		Description: configFile.Description,
@@ -167,6 +168,9 @@ func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *mod
 	}
 	if model.Route == "" {
 		model.Route = "random"
+	}
+	if model.Probe.Interval == "" {
+		model.Probe.Interval = "30s"
 	}
 	return model
 }

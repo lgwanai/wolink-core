@@ -33,7 +33,8 @@ type ModelConfig struct {
 	Name        string            `json:"name" yaml:"name"`
 	Type        string            `json:"type" yaml:"type"`
 	Mode        string            `json:"mode" yaml:"mode"`
-	Route       string            `json:"route" yaml:"route"` // random, balance, fastest
+	Route       string            `json:"route" yaml:"route"`
+	Probe       ProbeConfig       `json:"probe" yaml:"probe"`
 	IconURI     string            `json:"icon_uri" yaml:"icon_uri"`
 	IconURL     string            `json:"icon_url" yaml:"icon_url"`
 	Description map[string]string `json:"description" yaml:"description"`
@@ -42,6 +43,12 @@ type ModelConfig struct {
 	Capability  CapabilityConfig  `json:"capability" yaml:"capability"`
 	ConnConfig  ConnectionConfig  `json:"conn_config" yaml:"conn_config"`
 	Parameters  []ParameterConfig `json:"parameters" yaml:"parameters"`
+}
+
+type ProbeConfig struct {
+	Enabled  bool   `json:"enabled" yaml:"enabled"`
+	Interval string `json:"interval" yaml:"interval"` // e.g. "30s"
+	Endpoint string `json:"endpoint" yaml:"endpoint"` // e.g. "/v1/health"
 }
 
 // ModelRegistry, APIKeyModelMapping, Conversation, UsageLog removed.
@@ -285,7 +292,8 @@ type ModelConfigFile struct {
 	Name        string            `yaml:"name"`
 	Type        string            `yaml:"type"`
 	Mode        string            `yaml:"mode"`
-	Route       string            `yaml:"route"` // random, balance, fastest
+	Route       string            `yaml:"route"`
+	Probe       ProbeConfig       `yaml:"probe"`
 	IconURI     string            `yaml:"icon_uri"`
 	IconURL     string            `yaml:"icon_url"`
 	Description map[string]string `yaml:"description"`
