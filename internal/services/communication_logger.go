@@ -18,6 +18,7 @@ import (
 // CommunicationRecord represents a single LLM communication record
 type CommunicationRecord struct {
 	Timestamp    time.Time       `json:"timestamp"`
+	TrackID      string          `json:"track_id"`
 	RequestID    string          `json:"request_id"`
 	APIKeyID     string          `json:"api_key_id"`
 	DepartmentID string          `json:"department_id"`

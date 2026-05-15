@@ -141,7 +141,7 @@ func (h *ChatHandler) handleStreamRequest(c *gin.Context, req *models.ChatComple
 	if err != nil {
 		h.writeSSEError(c, err.Error())
 		// Log failed request
-		h.logCommunication(req.RawBody, nil, requestID, apiKey, modelConfig, true, startTime, 0, hasSensitive, err.Error())
+		h.logCommunication(req.RawBody, nil, requestID, requestID, apiKey, modelConfig, true, startTime, 0, hasSensitive, err.Error())
 		// Publish Kafka log for failed stream request
 		responseTime := time.Since(startTime).Milliseconds()
 		maskedPrompt := h.extractUserMessage(messages)
@@ -206,7 +206,7 @@ func (h *ChatHandler) handleStreamRequest(c *gin.Context, req *models.ChatComple
 
 	// Log communication (non-blocking)
 	responseJSON := h.buildStreamResponseJSON(fullResponse.String(), tokensUsed, modelConfig.Name)
-	h.logCommunication(req.RawBody, responseJSON, requestID, apiKey, modelConfig, true, startTime, tokensUsed, hasSensitive, "")
+	h.logCommunication(req.RawBody, responseJSON, requestID, requestID, apiKey, modelConfig, true, startTime, tokensUsed, hasSensitive, "")
 
 	// 记录使用量
 	h.serviceManager.AuthService.RecordUsage(apiKey, tokensUsed)
@@ -237,7 +237,7 @@ func (h *ChatHandler) handleNonStreamRequest(c *gin.Context, req *models.ChatCom
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		// Log failed request
-		h.logCommunication(req.RawBody, nil, requestID, apiKey, modelConfig, false, startTime, 0, hasSensitive, err.Error())
+		h.logCommunication(req.RawBody, nil, requestID, requestID, apiKey, modelConfig, false, startTime, 0, hasSensitive, err.Error())
 		// Publish Kafka log for failed non-stream request
 		responseTime := time.Since(startTime).Milliseconds()
 		maskedPrompt := h.extractUserMessage(messages)
@@ -256,10 +256,24 @@ func (h *ChatHandler) handleNonStreamRequest(c *gin.Context, req *models.ChatCom
 
 	// Log communication (non-blocking)
 	responseJSON, _ := json.Marshal(chatResp)
-	h.logCommunication(req.RawBody, responseJSON, requestID, apiKey, modelConfig, false, startTime, chatResp.Usage.TotalTokens, hasSensitive, "")
+	h.logCommunication(req.RawBody, responseJSON, requestID, requestID, apiKey, modelConfig, false, startTime, chatResp.Usage.TotalTokens, hasSensitive, "")
 
 	// 记录使用量
 	h.serviceManager.AuthService.RecordUsage(apiKey, chatResp.Usage.TotalTokens)
+
+	// 记录Token统计
+	if h.serviceManager.TokenTracker != nil {
+		h.serviceManager.TokenTracker.Record(&services.TokenRecord{
+			Timestamp:        time.Now(),
+			TrackID:          requestID,
+			APIKeyID:         apiKey.KeyID,
+			ModelName:        modelConfig.Name,
+			PromptTokens:     chatResp.Usage.PromptTokens,
+			CompletionTokens: chatResp.Usage.CompletionTokens,
+			CacheTokens:      chatResp.Usage.CacheTokens,
+			TotalTokens:      chatResp.Usage.TotalTokens,
+		})
+	}
 
 	// Publish Kafka log for successful non-stream request
 	responseTime := time.Since(startTime).Milliseconds()
@@ -276,6 +290,7 @@ func (h *ChatHandler) handleNonStreamRequest(c *gin.Context, req *models.ChatCom
 func (h *ChatHandler) logCommunication(
 	requestRaw json.RawMessage,
 	responseRaw json.RawMessage,
+	trackID string,
 	requestID string,
 	apiKey *models.APIKey,
 	modelConfig *models.ModelConfig,
@@ -292,7 +307,7 @@ func (h *ChatHandler) logCommunication(
 	duration := time.Since(startTime).Milliseconds()
 
 	record := &services.CommunicationRecord{
-		RequestID:    requestID,
+		TrackID:   trackID,
 		APIKeyID:     apiKey.KeyID,
 		ModelName:    modelConfig.Name,
 		IsStream:     isStream,
@@ -725,6 +740,7 @@ func (h *ChatHandler) AudioSpeech(c *gin.Context) {
 // OCR 处理OCR请求
 func (h *ChatHandler) OCR(c *gin.Context) {
 	startTime := time.Now()
+	trackID := uuid.New().String()
 
 	apiKey, exists := c.Get("api_key")
 	if !exists {
@@ -787,7 +803,7 @@ func (h *ChatHandler) OCR(c *gin.Context) {
 		"file":  header.Filename,
 	})
 	responseRaw, _ := json.Marshal(resp)
-	h.logCommunication(requestRaw, responseRaw, uuid.New().String(), apiKeyInfo, modelConfig, false, startTime, 0, false, "")
+	h.logCommunication(requestRaw, responseRaw, trackID, trackID, apiKeyInfo, modelConfig, false, startTime, 0, false, "")
 }
 
 // ListModels 列出可用模型

@@ -14,6 +14,13 @@ import (
 type PluginConfigs struct {
 	CommunicationLog CommunicationLogConfig `mapstructure:"communication_log"`
 	GatewayLog       GatewayLogConfig       `mapstructure:"gateway_log"`
+	TokenTracker     TokenTrackerConfig     `mapstructure:"token_tracker"`
+}
+
+// TokenTrackerConfig holds token usage tracking plugin settings
+type TokenTrackerConfig struct {
+	Enabled     bool   `mapstructure:"enabled"`
+	StoragePath string `mapstructure:"storage_path"`
 }
 
 func LoadPluginConfigs() (*PluginConfigs, error) {

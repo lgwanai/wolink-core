@@ -97,6 +97,7 @@ type Usage struct {
 	PromptTokens     int `json:"prompt_tokens"`
 	CompletionTokens int `json:"completion_tokens"`
 	TotalTokens      int `json:"total_tokens"`
+	CacheTokens      int `json:"cache_tokens,omitempty"`
 }
 
 // 流式响应

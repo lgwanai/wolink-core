@@ -1,0 +1,6 @@
+# Token tracker plugin
+# Records per-API-key token usage (prompt, completion, cache) for cost analysis
+# Each record shares track_id with communication_log for cross-referencing
+token_tracker:
+  enabled: true
+  storage_path: "./logs/tokens"

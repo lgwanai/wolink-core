@@ -20,6 +20,7 @@ type ServiceManager struct {
 	CommunicationLogger *CommunicationLogger
 	NodeService         *NodeService
 	GatewayLog          *GatewayLogService
+	TokenTracker        *TokenTracker
 	QuotaChecker        *QuotaChecker
 	AdminSyncService    *AdminSyncService
 }
@@ -31,7 +32,6 @@ func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Con
 		Config: cfg,
 	}
 
-	// Create APIKeyValidator for config-driven auth (no DB)
 	apiKeyValidator := NewAPIKeyValidator(cfg, logger)
 
 	sm.AuthService = NewAuthService(rdb, logger, cfg, apiKeyValidator)
@@ -41,7 +41,6 @@ func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Con
 	sm.PluginService = NewPluginService(logger, cfg)
 	sm.NodeService = NewNodeService(cfg, logger, "dev")
 
-	// Initialize communication logger
 	sm.CommunicationLogger = NewCommunicationLogger(
 		&pc.CommunicationLog,
 		rdb,
@@ -49,18 +48,17 @@ func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Con
 		logger.Errorf,
 	)
 
-	// Initialize gateway log service (local or Kafka)
 	gatewayLog, err := NewGatewayLogService(&pc.GatewayLog, logger)
 	if err != nil {
 		logger.Errorf("Failed to initialize gateway log service: %v", err)
 	}
 	sm.GatewayLog = gatewayLog
 
-	// Initialize QuotaChecker for quota enforcement
+	sm.TokenTracker = NewTokenTracker(&pc.TokenTracker)
+
 	sm.QuotaChecker = NewQuotaChecker(rdb, logger, cfg)
 	logger.Info("QuotaChecker initialized")
 
-	// Start AdminSyncService in multi-node mode
 	if cfg.Gateway.Mode == "multi" {
 		syncService := NewAdminSyncService(cfg, logger, apiKeyValidator)
 		syncService.StartSync()
@@ -68,7 +66,6 @@ func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Con
 		logger.Infof("AdminSyncService started (multi-node mode, syncing from %s)", cfg.Gateway.AdminMaster.URL)
 	}
 
-	// 加载模型配置（filesystem only, no DB）
 	if err := sm.ModelConfigService.LoadModelConfigs(); err != nil {
 		logger.Errorf("Failed to load model configs: %v", err)
 	}
@@ -76,7 +73,6 @@ func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Con
 	return sm
 }
 
-// Stop 停止所有服务
 func (sm *ServiceManager) Stop() {
 	if sm.AdminSyncService != nil {
 		sm.AdminSyncService.StopSync()
@@ -90,5 +86,8 @@ func (sm *ServiceManager) Stop() {
 	}
 	if sm.CommunicationLogger != nil {
 		sm.CommunicationLogger.Close()
+	}
+	if sm.TokenTracker != nil {
+		sm.TokenTracker.Close()
 	}
 }
