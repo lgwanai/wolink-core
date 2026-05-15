@@ -24,22 +24,25 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// 加载插件配置
+	pc, err := config.LoadPluginConfigs()
+	if err != nil {
+		log.Fatalf("Failed to load plugin configs: %v", err)
+	}
+
 	// 初始化日志
 	logger := utils.NewLogger(cfg.Log.Level)
-
-	// 数据库初始化已移除 — 网关完全无状态
-	// DB-dependent operations moved to external admin service
 
 	// 初始化 Redis (optional — gateway works without it)
 	var rdb *redis.Client
 	rdb, err = utils.InitRedis(cfg.Redis, cfg.Infrastructure.Redis)
 	if err != nil {
 		logger.Warnf("Redis not available (rate limiting disabled): %v", err)
-		rdb = nil // Continue without Redis — rate limiting will be skipped
+		rdb = nil
 	}
 
 	// 初始化服务 (no database dependency)
-	serviceManager := services.NewServiceManager(rdb, logger, cfg)
+	serviceManager := services.NewServiceManager(rdb, logger, cfg, pc)
 
 	// 设置 Gin 模式
 	if cfg.Server.Mode == "release" {

@@ -24,7 +24,7 @@ type ServiceManager struct {
 	AdminSyncService    *AdminSyncService
 }
 
-func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Config) *ServiceManager {
+func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Config, pc *config.PluginConfigs) *ServiceManager {
 	sm := &ServiceManager{
 		Redis:  rdb,
 		Logger: logger,
@@ -43,14 +43,14 @@ func NewServiceManager(rdb *redis.Client, logger *logrus.Logger, cfg *config.Con
 
 	// Initialize communication logger
 	sm.CommunicationLogger = NewCommunicationLogger(
-		&cfg.CommunicationLog,
+		&pc.CommunicationLog,
 		rdb,
 		logger.Infof,
 		logger.Errorf,
 	)
 
 	// Initialize gateway log service (local or Kafka)
-	gatewayLog, err := NewGatewayLogService(&cfg.GatewayLog, logger)
+	gatewayLog, err := NewGatewayLogService(&pc.GatewayLog, logger)
 	if err != nil {
 		logger.Errorf("Failed to initialize gateway log service: %v", err)
 	}

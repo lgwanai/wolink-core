@@ -2,23 +2,68 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
 )
 
-type Config struct {
-	Server           ServerConfig           `mapstructure:"server"`
-	Redis            RedisConfig            `mapstructure:"redis"`
-	Log              LogConfig              `mapstructure:"log"`
-	Security         SecurityConfig         `mapstructure:"security"`
-	Models           ModelsConfig           `mapstructure:"models"`
-	Infrastructure   InfrastructureConfig   `mapstructure:"infrastructure"`
+// PluginConfigs holds configuration for all plugins loaded from configs/plugins/
+type PluginConfigs struct {
 	CommunicationLog CommunicationLogConfig `mapstructure:"communication_log"`
-	Node             NodeConfig             `mapstructure:"node"`
-	Admin            AdminConfig            `mapstructure:"admin"`
 	GatewayLog       GatewayLogConfig       `mapstructure:"gateway_log"`
-	Gateway          GatewayConfig          `mapstructure:"gateway"`
+}
+
+func LoadPluginConfigs() (*PluginConfigs, error) {
+	p := &PluginConfigs{}
+	v := viper.New()
+	v.SetConfigName("plugin")
+	v.SetConfigType("yaml")
+	v.AddConfigPath("./configs/plugins")
+
+	// Read all yaml files from plugins directory
+	dir := "./configs/plugins"
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return p, nil
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if !strings.HasSuffix(entry.Name(), ".yaml") && !strings.HasSuffix(entry.Name(), ".yml") {
+			continue
+		}
+
+		v2 := viper.New()
+		v2.SetConfigFile(filepath.Join(dir, entry.Name()))
+		if err := v2.ReadInConfig(); err != nil {
+			continue
+		}
+		for _, key := range v2.AllKeys() {
+			v.Set(key, v2.Get(key))
+		}
+	}
+
+	if err := v.Unmarshal(p); err != nil {
+		return p, nil
+	}
+	return p, nil
+}
+
+type Config struct {
+	Server         ServerConfig         `mapstructure:"server"`
+	Redis          RedisConfig          `mapstructure:"redis"`
+	Log            LogConfig            `mapstructure:"log"`
+	Security       SecurityConfig       `mapstructure:"security"`
+	Models         ModelsConfig         `mapstructure:"models"`
+	Infrastructure InfrastructureConfig `mapstructure:"infrastructure"`
+	Node           NodeConfig           `mapstructure:"node"`
+	Admin          AdminConfig          `mapstructure:"admin"`
+	Gateway        GatewayConfig        `mapstructure:"gateway"`
 }
 
 // GatewayLogConfig holds gateway operational log configuration.
@@ -187,15 +232,6 @@ func setDefaults() {
 	viper.SetDefault("node.id", "node-default")
 	viper.SetDefault("node.region", "default")
 
-	// Communication log defaults
-	viper.SetDefault("communication_log.enabled", false)
-	viper.SetDefault("communication_log.storage_path", "./logs/communications")
-	viper.SetDefault("communication_log.max_file_size_mb", 100)
-	viper.SetDefault("communication_log.mode", "local")
-	viper.SetDefault("communication_log.enable_remote_sync", false)
-	viper.SetDefault("communication_log.redis_queue_key", "wolink:comm_logs")
-	viper.SetDefault("communication_log.flush_interval_ms", 1000)
-
 	// Infrastructure defaults
 	viper.SetDefault("infrastructure.shutdown_timeout", "30s")
 	viper.SetDefault("infrastructure.read_timeout", "15s")
@@ -210,13 +246,6 @@ func setDefaults() {
 
 	// Admin defaults
 	viper.SetDefault("admin.token", "")
-
-	// Gateway log defaults
-	viper.SetDefault("gateway_log.mode", "local")
-	viper.SetDefault("gateway_log.storage_path", "./logs/gateway")
-	viper.SetDefault("gateway_log.brokers", []string{"localhost:9092"})
-	viper.SetDefault("gateway_log.topic", "gateway-logs")
-	viper.SetDefault("gateway_log.enabled", true)
 
 	// Gateway defaults - database is optional, gateway can run without it
 	viper.SetDefault("gateway.mode", "single")

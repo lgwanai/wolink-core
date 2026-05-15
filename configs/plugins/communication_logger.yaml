@@ -1,0 +1,10 @@
+# Communication logger plugin
+# Records LLM request/response payloads to local files or Redis queue
+communication_log:
+  enabled: true
+  mode: "local"         # local / shared / disabled
+  storage_path: "./logs/communications"
+  enable_remote_sync: false
+  redis_queue_key: "wolink:comm_logs"
+  max_file_size_mb: 100
+  flush_interval_ms: 1000

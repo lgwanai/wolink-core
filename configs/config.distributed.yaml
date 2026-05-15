@@ -36,41 +36,18 @@ security:
 models:
   config_path: "./configs/models"
 
-# 通信日志配置 - 支持分布式
-communication_log:
-  enabled: true
-  mode: "local"  # local: 每个节点写本地文件
-                 # shared: 使用共享存储（NFS等）
-  
-  # 本地存储路径
-  storage_path: "./logs/communications"
-  
-  # 启用Redis同步（推荐多节点部署时开启）
-  # 开启后，日志会同时写入Redis队列，可被集中收集器消费
-  enable_remote_sync: true
-  redis_queue_key: "wolink:comm_logs"
-  
-  # 文件大小和刷新间隔
-  max_file_size_mb: 100
-  flush_interval_ms: 1000  # 1秒刷新一次
-
-# Admin management API authentication
 admin:
-  token: "${ADMIN_TOKEN}"  # 从环境变量读取，所有节点使用相同token
+  token: "${ADMIN_TOKEN}"
 
-# Gateway configuration
 gateway:
-  mode: "multi"  # 多节点模式：从管理端同步配置
+  mode: "multi"
 
-  # 多节点模式：从管理端(master)通过API拉取配置
   admin_master:
-    url: "http://admin.internal:8080"  # 管理端地址
-    token: "${ADMIN_TOKEN}"            # 管理端鉴权token
+    url: "http://admin.internal:8080"
+    token: "${ADMIN_TOKEN}"
 
-  # 配置同步间隔
   sync_interval: "30s"
 
-# 基础设施配置 - 多节点需要调整连接池
 infrastructure:
   # 优雅关闭超时
   shutdown_timeout: "30s"

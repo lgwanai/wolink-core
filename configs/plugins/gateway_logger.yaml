@@ -1,0 +1,6 @@
+# Gateway log plugin
+# Records operational metrics (tokens, cost, response time) to local files or Kafka
+gateway_log:
+  mode: "local"      # local / kafka
+  storage_path: "./logs/gateway"
+  enabled: true
