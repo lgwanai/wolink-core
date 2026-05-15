@@ -78,7 +78,7 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 	}
 
 	// 根据路由规则选择模型
-	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels, "random")
+	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -496,7 +496,7 @@ func (h *ChatHandler) Embeddings(c *gin.Context) {
 	}
 
 	// 根据路由规则选择模型
-	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels, "random")
+	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -561,7 +561,7 @@ func (h *ChatHandler) Rerank(c *gin.Context) {
 	}
 
 	// 根据路由规则选择模型
-	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels, "random")
+	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -635,7 +635,7 @@ func (h *ChatHandler) AudioTranscriptions(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("model %s not available", req.Model)})
 		return
 	}
-	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels, "random")
+	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -692,7 +692,7 @@ func (h *ChatHandler) AudioSpeech(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("model %s not available", req.Model)})
 		return
 	}
-	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels, "random")
+	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -763,7 +763,7 @@ func (h *ChatHandler) OCR(c *gin.Context) {
 		return
 	}
 
-	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels, "random")
+	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

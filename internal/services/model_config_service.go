@@ -3,9 +3,12 @@ package services
 import (
 	"fmt"
 	"io/fs"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"wolink-core/internal/config"
 	"wolink-core/internal/models"
@@ -17,12 +20,49 @@ import (
 type ModelConfigService struct {
 	logger *logrus.Logger
 	config *config.Config
+
+	mu        sync.Mutex
+	rrCount   map[string]uint64 // round-robin counter per model name
+
+	latencyTracker *LatencyTracker
+}
+
+type LatencyTracker struct {
+	mu     sync.RWMutex
+	latest map[string]time.Duration // model ID -> last response time
+	avg    map[string]time.Duration // model ID -> moving average
+}
+
+func NewLatencyTracker() *LatencyTracker {
+	return &LatencyTracker{
+		latest: make(map[string]time.Duration),
+		avg:    make(map[string]time.Duration),
+	}
+}
+
+func (lt *LatencyTracker) Record(modelID string, d time.Duration) {
+	lt.mu.Lock()
+	defer lt.mu.Unlock()
+	lt.latest[modelID] = d
+	if prev, ok := lt.avg[modelID]; ok {
+		lt.avg[modelID] = (prev*3 + d) / 4
+	} else {
+		lt.avg[modelID] = d
+	}
+}
+
+func (lt *LatencyTracker) GetAvg(modelID string) time.Duration {
+	lt.mu.RLock()
+	defer lt.mu.RUnlock()
+	return lt.avg[modelID]
 }
 
 func NewModelConfigService(logger *logrus.Logger, cfg *config.Config) *ModelConfigService {
 	return &ModelConfigService{
-		logger: logger,
-		config: cfg,
+		logger:         logger,
+		config:         cfg,
+		rrCount:        make(map[string]uint64),
+		latencyTracker: NewLatencyTracker(),
 	}
 }
 
@@ -112,6 +152,7 @@ func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *mod
 		Name:        configFile.Name,
 		Type:        configFile.Type,
 		Mode:        configFile.Mode,
+		Route:       configFile.Route,
 		IconURI:     configFile.IconURI,
 		IconURL:     configFile.IconURL,
 		Description: configFile.Description,
@@ -124,11 +165,14 @@ func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *mod
 	if model.Mode == "" {
 		model.Mode = "parsed"
 	}
+	if model.Route == "" {
+		model.Route = "random"
+	}
 	return model
 }
 
-// SelectModelByRoute 根据路由规则选择模型
-func (s *ModelConfigService) SelectModelByRoute(models []models.ModelConfig, routeType string) (*models.ModelConfig, error) {
+// SelectModelByRoute 根据模型配置中的路由规则选择模型
+func (s *ModelConfigService) SelectModelByRoute(models []models.ModelConfig) (*models.ModelConfig, error) {
 	if len(models) == 0 {
 		return nil, fmt.Errorf("no models available")
 	}
@@ -137,18 +181,48 @@ func (s *ModelConfigService) SelectModelByRoute(models []models.ModelConfig, rou
 		return &models[0], nil
 	}
 
+	routeType := models[0].Route
 	switch routeType {
 	case "random":
-		// 随机选择
-		return &models[0], nil // 简化实现，实际应该随机选择
-	case "round_robin":
-		// 轮询选择（需要状态管理）
-		return &models[0], nil
-	case "weighted":
-		// 权重选择（简化实现）
-		return &models[0], nil
+		return s.selectRandom(models)
+	case "balance":
+		return s.selectBalance(models)
+	case "fastest":
+		return s.selectFastest(models)
 	default:
-		// 默认随机
-		return &models[0], nil
+		return s.selectRandom(models)
 	}
+}
+
+func (s *ModelConfigService) selectRandom(models []models.ModelConfig) (*models.ModelConfig, error) {
+	idx := rand.Intn(len(models))
+	return &models[idx], nil
+}
+
+func (s *ModelConfigService) selectBalance(models []models.ModelConfig) (*models.ModelConfig, error) {
+	name := models[0].Name
+	s.mu.Lock()
+	s.rrCount[name]++
+	count := s.rrCount[name]
+	s.mu.Unlock()
+	idx := int(count) % len(models)
+	return &models[idx], nil
+}
+
+func (s *ModelConfigService) selectFastest(models []models.ModelConfig) (*models.ModelConfig, error) {
+	idx := 0
+	best := s.latencyTracker.GetAvg(models[0].ID)
+	for i := 1; i < len(models); i++ {
+		lat := s.latencyTracker.GetAvg(models[i].ID)
+		if lat > 0 && (best == 0 || lat < best) {
+			best = lat
+			idx = i
+		}
+	}
+	return &models[idx], nil
+}
+
+// RecordLatency records response time for a model (used by fastest routing)
+func (s *ModelConfigService) RecordLatency(modelID string, d time.Duration) {
+	s.latencyTracker.Record(modelID, d)
 }

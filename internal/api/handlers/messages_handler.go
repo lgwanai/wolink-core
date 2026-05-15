@@ -98,7 +98,7 @@ func (h *ChatHandler) Messages(c *gin.Context) {
 	}
 
 	// 根据路由规则选择模型
-	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels, "random")
+	modelConfig, err := h.serviceManager.ModelConfigService.SelectModelByRoute(availableModels)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

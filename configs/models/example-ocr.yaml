@@ -3,6 +3,7 @@ id: example-ocr
 name: Example OCR Model
 type: ocr
 mode: parsed
+route: random
 icon_uri: default_icon/ocr.png
 description:
   zh: OCR 模型示例
