@@ -1,0 +1,44 @@
+# Provider 配置示例
+# 一个 provider 可以有多个 model，共享 base_url 和 api_key
+id: example-provider
+name: Example Provider
+protocol: openai
+base_url: "http://127.0.0.1:8080"
+api_key: "your-api-key"
+description:
+  zh: 示例模型提供商
+
+models:
+  - id: example-chat
+    name: Example Chat Model
+    type: chat
+    mode: passthrough
+    route: random
+    model: "example-chat-model"
+    defaults:
+      temperature: 0.7
+      max_tokens: 4096
+      top_p: 0.9
+    probe:
+      enabled: true
+      interval: "30s"
+      test_prompt: "hello"
+    capability:
+      function_call: true
+      input_modal:
+        - text
+      output_modal:
+        - text
+
+  - id: example-ocr
+    name: Example OCR Model
+    type: ocr
+    mode: parsed
+    route: random
+    model: "example-ocr-model"
+    capability:
+      function_call: false
+      input_modal:
+        - image
+      output_modal:
+        - text

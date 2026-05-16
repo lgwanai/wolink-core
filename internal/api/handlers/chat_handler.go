@@ -89,6 +89,13 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
+	if req.Temperature == nil && modelConfig.Defaults.Temperature != nil {
+		req.Temperature = modelConfig.Defaults.Temperature
+	}
+	if req.MaxTokens == nil && modelConfig.Defaults.MaxTokens != nil {
+		req.MaxTokens = modelConfig.Defaults.MaxTokens
+	}
+
 	// 敏感信息检测和替换
 	cleanMessages := make([]models.ChatMessage, len(req.Messages))
 	hasSensitive := false

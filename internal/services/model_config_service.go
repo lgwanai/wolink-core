@@ -75,20 +75,80 @@ func (s *ModelConfigService) LoadModelConfigs() error {
 		if err != nil {
 			return err
 		}
-
 		if d.IsDir() || !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") {
 			return nil
 		}
 
-		cfgModel := s.loadModelFromConfigFile(d.Name())
-		if cfgModel != nil {
-			s.mu.Lock()
-			s.models = append(s.models, *cfgModel)
-			s.mu.Unlock()
-			s.logger.Infof("Loaded model config: %s (ID: %s)", cfgModel.Name, cfgModel.ID)
-		}
+		s.loadModelsFromFile(path)
 		return nil
 	})
+}
+
+func (s *ModelConfigService) loadModelsFromFile(path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		s.logger.Errorf("Failed to read %s: %v", path, err)
+		return
+	}
+
+	// Try provider format (has "models:" key)
+	var provider models.ProviderFile
+	if err := yaml.Unmarshal(data, &provider); err == nil && len(provider.Models) > 0 {
+		for _, def := range provider.Models {
+			cfg := s.buildModelConfig(def, provider)
+			s.mu.Lock()
+			s.models = append(s.models, *cfg)
+			s.mu.Unlock()
+			s.logger.Infof("Loaded model: %s (ID: %s, provider: %s)", cfg.Name, cfg.ID, provider.Name)
+		}
+		return
+	}
+
+	// Fallback: single model file format
+	cfgModel := s.loadModelFromConfigFile(path)
+	if cfgModel != nil {
+		s.mu.Lock()
+		s.models = append(s.models, *cfgModel)
+		s.mu.Unlock()
+		s.logger.Infof("Loaded model config: %s (ID: %s)", cfgModel.Name, cfgModel.ID)
+	}
+}
+
+func (s *ModelConfigService) buildModelConfig(def models.ModelDef, provider models.ProviderFile) *models.ModelConfig {
+	cfg := &models.ModelConfig{
+		ID:          def.ID,
+		Name:        def.Name,
+		Type:        def.Type,
+		Mode:        def.Mode,
+		Route:       def.Route,
+		Probe:       def.Probe,
+		Defaults:    def.Defaults,
+		IconURI:     def.IconURI,
+		IconURL:     def.IconURL,
+		Description: def.Description,
+		Protocol:    provider.Protocol,
+		Capability:  def.Capability,
+		Parameters:  def.Parameters,
+		Status:      def.Status,
+		ConnConfig: models.ConnectionConfig{
+			BaseURL: provider.BaseURL,
+			APIKey:  provider.APIKey,
+			Model:   def.Model,
+		},
+	}
+	if cfg.Type == "" {
+		cfg.Type = "chat"
+	}
+	if cfg.Mode == "" {
+		cfg.Mode = "parsed"
+	}
+	if cfg.Route == "" {
+		cfg.Route = "random"
+	}
+	if cfg.Probe.Enabled && cfg.Probe.Interval == "" {
+		cfg.Probe.Interval = "30s"
+	}
+	return cfg
 }
 
 // GetModelsByAPIKey 从已加载的模型列表中过滤出可用模型
@@ -114,23 +174,19 @@ func (s *ModelConfigService) GetModelsByAPIKey(apiKeyID string, modelName string
 }
 
 // loadModelFromConfigFile 从配置文件加载模型配置
-func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *models.ModelConfig {
-	configPath := filepath.Join(s.config.Models.ConfigPath, configFileName)
-
-	// 读取配置文件
-	data, err := os.ReadFile(configPath)
+func (s *ModelConfigService) loadModelFromConfigFile(path string) *models.ModelConfig {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		s.logger.Errorf("Failed to read config file %s: %v", configPath, err)
+		s.logger.Errorf("Failed to read config file %s: %v", path, err)
 		return nil
 	}
 
 	var configFile models.ModelConfigFile
 	if err := yaml.Unmarshal(data, &configFile); err != nil {
-		s.logger.Errorf("Failed to parse config file %s: %v", configPath, err)
+		s.logger.Errorf("Failed to parse config file %s: %v", path, err)
 		return nil
 	}
 
-	// 转换为运行时模型配置
 	model := &models.ModelConfig{
 		ID:          configFile.ID,
 		Name:        configFile.Name,
@@ -138,6 +194,7 @@ func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *mod
 		Mode:        configFile.Mode,
 		Route:       configFile.Route,
 		Probe:       configFile.Probe,
+		Defaults:    configFile.Defaults,
 		IconURI:     configFile.IconURI,
 		IconURL:     configFile.IconURL,
 		Description: configFile.Description,
@@ -147,16 +204,17 @@ func (s *ModelConfigService) loadModelFromConfigFile(configFileName string) *mod
 		Parameters:  configFile.Parameters,
 		Status:      configFile.Status,
 	}
+	if model.Type == "" {
+		model.Type = "chat"
+	}
 	if model.Mode == "" {
 		model.Mode = "parsed"
 	}
 	if model.Route == "" {
 		model.Route = "random"
 	}
-	if model.Probe.Enabled {
-		if model.Probe.Interval == "" {
-			model.Probe.Interval = "30s"
-		}
+	if model.Probe.Enabled && model.Probe.Interval == "" {
+		model.Probe.Interval = "30s"
 	}
 	return model
 }

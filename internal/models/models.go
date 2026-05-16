@@ -35,6 +35,7 @@ type ModelConfig struct {
 	Mode        string            `json:"mode" yaml:"mode"`
 	Route       string            `json:"route" yaml:"route"`
 	Probe       ProbeConfig       `json:"probe" yaml:"probe"`
+	Defaults    ModelDefaults     `json:"defaults" yaml:"defaults"`
 	IconURI     string            `json:"icon_uri" yaml:"icon_uri"`
 	IconURL     string            `json:"icon_url" yaml:"icon_url"`
 	Description map[string]string `json:"description" yaml:"description"`
@@ -43,6 +44,15 @@ type ModelConfig struct {
 	Capability  CapabilityConfig  `json:"capability" yaml:"capability"`
 	ConnConfig  ConnectionConfig  `json:"conn_config" yaml:"conn_config"`
 	Parameters  []ParameterConfig `json:"parameters" yaml:"parameters"`
+}
+
+type ModelDefaults struct {
+	Temperature      *float32 `json:"temperature,omitempty" yaml:"temperature,omitempty"`
+	MaxTokens        *int     `json:"max_tokens,omitempty" yaml:"max_tokens,omitempty"`
+	TopP             *float32 `json:"top_p,omitempty" yaml:"top_p,omitempty"`
+	FrequencyPenalty *float32 `json:"frequency_penalty,omitempty" yaml:"frequency_penalty,omitempty"`
+	PresencePenalty  *float32 `json:"presence_penalty,omitempty" yaml:"presence_penalty,omitempty"`
+	MaxContext       int      `json:"max_context,omitempty" yaml:"max_context,omitempty"`
 }
 
 type ProbeConfig struct {
@@ -287,6 +297,7 @@ type OCRRegion struct {
 
 // 模型配置文件结构
 
+// ModelConfigFile 单模型配置文件（向后兼容）
 type ModelConfigFile struct {
 	ID          string            `yaml:"id"`
 	Name        string            `yaml:"name"`
@@ -294,6 +305,7 @@ type ModelConfigFile struct {
 	Mode        string            `yaml:"mode"`
 	Route       string            `yaml:"route"`
 	Probe       ProbeConfig       `yaml:"probe"`
+	Defaults    ModelDefaults     `yaml:"defaults"`
 	IconURI     string            `yaml:"icon_uri"`
 	IconURL     string            `yaml:"icon_url"`
 	Description map[string]string `yaml:"description"`
@@ -301,6 +313,35 @@ type ModelConfigFile struct {
 	Meta        MetaConfig        `yaml:"meta"`
 	ConnConfig  ConnectionConfig  `yaml:"conn_config"`
 	Status      int               `yaml:"status"`
+}
+
+// ProviderFile 多模型配置文件（一个 provider 包含多个 model）
+type ProviderFile struct {
+	ID          string            `yaml:"id"`
+	Name        string            `yaml:"name"`
+	Protocol    string            `yaml:"protocol"`
+	BaseURL     string            `yaml:"base_url"`
+	APIKey      string            `yaml:"api_key"`
+	Description map[string]string `yaml:"description"`
+	Models      []ModelDef        `yaml:"models"`
+}
+
+// ModelDef 模型定义（在 provider 内定义）
+type ModelDef struct {
+	ID          string            `yaml:"id"`
+	Name        string            `yaml:"name"`
+	Type        string            `yaml:"type"`
+	Mode        string            `yaml:"mode"`
+	Route       string            `yaml:"route"`
+	Probe       ProbeConfig       `yaml:"probe"`
+	Defaults    ModelDefaults     `yaml:"defaults"`
+	Model       string            `yaml:"model"`
+	IconURI     string            `yaml:"icon_uri"`
+	IconURL     string            `yaml:"icon_url"`
+	Description map[string]string `yaml:"description"`
+	Status      int               `yaml:"status"`
+	Parameters  []ParameterConfig `yaml:"default_parameters"`
+	Capability  CapabilityConfig  `yaml:"capability"`
 }
 
 type ParameterConfig struct {
