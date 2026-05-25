@@ -115,13 +115,13 @@ func TestDeleteProviderFile_RemovesFile(t *testing.T) {
 // providers tab renders a heading containing "Providers" in list state.
 func TestRenderProvidersContent_ReturnsProvidersHeading(t *testing.T) {
 	m := newTestModel()
-	m.activeTab = tabProviders
+	m.currentScreen = screenProviders
 
 	// Ensure the model has provider state fields initialized.
 	// (They will get their zero values which is fine for this test.)
 	result := renderProvidersContent(m)
 	assert.Contains(t, result, "Providers")
-	assert.Contains(t, result, "Enter")
+	assert.Contains(t, result, "Add Provider")
 }
 
 // TestSaveProviderFile_FieldLevelRoundTrip checks that every field of a

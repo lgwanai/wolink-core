@@ -58,3 +58,4 @@ dump.rdb
 server
 *.test
 wolink-cli
+/tui

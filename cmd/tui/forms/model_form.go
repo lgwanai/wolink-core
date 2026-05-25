@@ -67,7 +67,7 @@ func NewModelFormEdit(def *models.ModelDef) ModelFormModel {
 }
 
 // Init returns a tea.Cmd that focuses the first input field.
-func (m ModelFormModel) Init() tea.Cmd {
+func (m *ModelFormModel) Init() tea.Cmd {
 	return m.activeInput().Focus()
 }
 
@@ -98,7 +98,6 @@ func (m ModelFormModel) Update(msg tea.Msg) (ModelFormModel, tea.Cmd) {
 		switch msg.String() {
 		case "enter":
 			if m.step == totalModelSteps-1 {
-				// Last step - validate and finish.
 				if ok, errMsg := m.validateStep(); ok {
 					m.finished = true
 				} else {
@@ -120,20 +119,21 @@ func (m ModelFormModel) Update(msg tea.Msg) (ModelFormModel, tea.Cmd) {
 			m.cancelled = true
 			return m, nil
 		}
-
-		// Delegate to the active textinput for text entry.
-		old := *m.activeInput()
-		updated, cmd := old.Update(msg)
-		*m.activeInput() = updated
-		m.errors = nil
-		return m, cmd
+		// For all other keys, fall through to delegate to textinput below.
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		return m, nil
 	}
 
-	return m, nil
+	// Delegate all unhandled messages to the active textinput.
+	// Critical: messages like BlurMsg/FocusMsg from textinput.Init()
+	// are not KeyPressMsg and must still reach the textinput.
+	old := *m.activeInput()
+	updated, cmd := old.Update(msg)
+	*m.activeInput() = updated
+	m.errors = nil
+	return m, cmd
 }
 
 // validateStep validates the current form step.

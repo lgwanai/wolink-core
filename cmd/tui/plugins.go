@@ -88,20 +88,21 @@ func renderPluginsError(m model) string {
 	if m.pluginErr != "" {
 		b.WriteString(" " + m.styles.errorStyle.Render(m.pluginErr) + "\n")
 	}
-	b.WriteString(" Press 'r' to refresh.\n")
 
 	return b.String()
 }
 
-// renderPluginsList renders the plugin list table with action hints.
+// renderPluginsList renders the plugin list table with action items.
 func renderPluginsList(m model) string {
 	var b strings.Builder
 
-	helpText := m.styles.helpStyle.Render("Enter: reload | d: unload | r: refresh | a: health-check all")
 	heading := m.styles.titleStyle.Render("Plugins")
 	b.WriteString(fmt.Sprintf(" %s\n", heading))
-	b.WriteString(fmt.Sprintf(" %s\n", helpText))
 	b.WriteString(" " + strings.Repeat("─", clampWidth(m.width-2, 60)) + "\n\n")
+
+	// Action items at top
+	b.WriteString(renderPluginsActions(m))
+	b.WriteString("\n")
 
 	// Column headers
 	b.WriteString(fmt.Sprintf("   %-20s %-12s %-10s %-8s %-8s\n", "Name", "Protocol", "Version", "Loaded", "Healthy"))
@@ -109,14 +110,14 @@ func renderPluginsList(m model) string {
 
 	if len(m.pluginListItems) == 0 {
 		b.WriteString("   No plugins loaded.\n")
-		b.WriteString("   Press 'r' to refresh.\n")
 		return b.String()
 	}
 
 	for i, item := range m.pluginListItems {
+		cursorIdx := 3 + i // action buttons are 0,1,2
 		cursor := "  "
-		if i == m.selectedPluginIdx {
-			cursor = " >"
+		if m.contentCursor == cursorIdx {
+			cursor = m.styles.actionActive.Render(" >")
 		}
 
 		loaded := m.styles.statusGreen.Render("yes")
@@ -140,64 +141,72 @@ func renderPluginsList(m model) string {
 	return b.String()
 }
 
-// ---------------------------------------------------------------------------
-// Key handling
-// ---------------------------------------------------------------------------
-
-// handlePluginsKeyMsg handles key events when the Plugins tab is active.
-// It dispatches based on the current pluginsTabState.
-func handlePluginsKeyMsg(m model, msg tea.KeyMsg) (model, tea.Cmd) {
-	// Ignore keys while loading.
-	if m.pluginsState == pluginsStateLoading {
-		return m, nil
-	}
-
-	switch msg.String() {
-	case "enter":
-		// Reload the selected plugin.
-		if m.selectedPluginIdx >= 0 && m.selectedPluginIdx < len(m.pluginListItems) {
-			protocol := m.pluginListItems[m.selectedPluginIdx].info.Protocol
-			m.pluginsState = pluginsStateLoading
-			return m, reloadPluginCmd(m.gwClient, protocol)
+// renderPluginsActions renders the visible action buttons for the plugins tab.
+func renderPluginsActions(m model) string {
+	actions := []string{"[Unload Selected]", "[Refresh List]", "[Health Check All]"}
+	var rendered []string
+	for i, label := range actions {
+		if m.contentCursor == i {
+			rendered = append(rendered, m.styles.actionActive.Render(label))
+		} else {
+			rendered = append(rendered, m.styles.actionItem.Render(label))
 		}
+	}
+	return "  " + strings.Join(rendered, "  ") + "\n"
+}
 
-	case "d":
-		// Unload the selected plugin.
-		if m.selectedPluginIdx >= 0 && m.selectedPluginIdx < len(m.pluginListItems) {
-			protocol := m.pluginListItems[m.selectedPluginIdx].info.Protocol
+// ---------------------------------------------------------------------------
+// Content enter handling
+// ---------------------------------------------------------------------------
+
+func handlePluginsContentEnter(m model) (tea.Model, tea.Cmd) {
+	c := m.contentCursor
+
+	// Action buttons (0, 1, 2)
+	if c == 0 {
+		// Unload selected plugin
+		if len(m.pluginListItems) == 0 {
+			return m, nil
+		}
+		idx := m.contentCursor - 3
+		if idx < 0 {
+			idx = 0
+		}
+		if idx < len(m.pluginListItems) {
+			protocol := m.pluginListItems[idx].info.Protocol
 			m.pluginsState = pluginsStateLoading
 			return m, unloadPluginCmd(m.gwClient, protocol)
 		}
-
-	case "r":
-		// Refresh the plugin list.
-		m.pluginsState = pluginsStateLoading
-		return m, refreshPluginsCmd(m.gwClient)
-
-	case "a":
-		// Health-check all plugins.
-		m.pluginsState = pluginsStateLoading
-		return m, healthCheckPluginsCmd(m.gwClient)
-
-	case "j", "down":
-		if len(m.pluginListItems) > 0 {
-			m.selectedPluginIdx++
-			if m.selectedPluginIdx >= len(m.pluginListItems) {
-				m.selectedPluginIdx = 0
-			}
-		}
-		return m, nil
-
-	case "k", "up":
-		if len(m.pluginListItems) > 0 {
-			m.selectedPluginIdx--
-			if m.selectedPluginIdx < 0 {
-				m.selectedPluginIdx = len(m.pluginListItems) - 1
-			}
-		}
 		return m, nil
 	}
+	if c == 1 {
+		// Refresh list
+		m.pluginsState = pluginsStateLoading
+		return m, refreshPluginsCmd(m.gwClient)
+	}
+	if c == 2 {
+		// Health check all
+		m.pluginsState = pluginsStateLoading
+		return m, healthCheckPluginsCmd(m.gwClient)
+	}
 
+	// Plugin list items (reload)
+	pluginIdx := c - 3
+	if pluginIdx >= 0 && pluginIdx < len(m.pluginListItems) {
+		protocol := m.pluginListItems[pluginIdx].info.Protocol
+		m.pluginsState = pluginsStateLoading
+		return m, reloadPluginCmd(m.gwClient, protocol)
+	}
+
+	return m, nil
+}
+
+// ---------------------------------------------------------------------------
+// Key handling (minimal — list navigation handled by model.go)
+// ---------------------------------------------------------------------------
+
+func handlePluginsKeyMsg(m model, msg tea.KeyMsg) (model, tea.Cmd) {
+	// No plugin-specific keys in list mode — all navigation via model.go focus system.
 	return m, nil
 }
 

@@ -161,28 +161,30 @@ func renderProvidersContent(m model) string {
 	}
 }
 
-// renderProvidersList renders the provider list view with action instructions.
+// renderProvidersList renders the provider list view with action items.
 func renderProvidersList(m model) string {
 	var b strings.Builder
 
-	helpText := m.styles.helpStyle.Render("Enter: edit | d: delete | a: add provider | n: add single model")
 	heading := m.styles.titleStyle.Render("Providers")
 	b.WriteString(fmt.Sprintf(" %s\n", heading))
-	b.WriteString(fmt.Sprintf(" %s\n", helpText))
 	b.WriteString(" " + strings.Repeat("─", clampWidth(m.width-2, 60)) + "\n\n")
+
+	// Action items at top
+	b.WriteString(renderProvidersActions(m))
+	b.WriteString("\n")
 
 	if len(m.providerListItems) == 0 && len(m.singleModelItems) == 0 {
 		b.WriteString("   No providers or models configured.\n")
-		b.WriteString("   Press 'a' to add a provider or 'n' to add a single model.\n")
 		return b.String()
 	}
 
 	if len(m.providerListItems) > 0 {
 		b.WriteString("   Providers:\n")
 		for i, item := range m.providerListItems {
+			cursorIdx := 3 + i // action buttons are 0,1,2
 			cursor := "  "
-			if i == m.selectedProviderIdx {
-				cursor = " >"
+			if m.contentCursor == cursorIdx {
+				cursor = m.styles.actionActive.Render(" >")
 			}
 			modelCount := fmt.Sprintf("%d models", len(item.provider.Models))
 			b.WriteString(fmt.Sprintf("   %s %-30s %-12s %s\n",
@@ -197,9 +199,10 @@ func renderProvidersList(m model) string {
 	if len(m.singleModelItems) > 0 {
 		b.WriteString("   Single Models:\n")
 		for i, item := range m.singleModelItems {
+			cursorIdx := 3 + len(m.providerListItems) + i
 			cursor := "  "
-			if i == m.selectedModelIdx && len(m.providerListItems) == 0 {
-				cursor = " >"
+			if m.contentCursor == cursorIdx {
+				cursor = m.styles.actionActive.Render(" >")
 			}
 			b.WriteString(fmt.Sprintf("   %s %-30s %-12s\n",
 				cursor,
@@ -212,92 +215,98 @@ func renderProvidersList(m model) string {
 	return b.String()
 }
 
+// renderProvidersActions renders the visible action buttons for the providers tab.
+func renderProvidersActions(m model) string {
+	actions := []string{"[Add Provider]", "[Add Single Model]", "[Delete Selected]"}
+	var rendered []string
+	for i, label := range actions {
+		if m.contentCursor == i {
+			rendered = append(rendered, m.styles.actionActive.Render(label))
+		} else {
+			rendered = append(rendered, m.styles.actionItem.Render(label))
+		}
+	}
+	return "  " + strings.Join(rendered, "  ") + "\n"
+}
+
 // ---------------------------------------------------------------------------
-// Key handling
+// Content enter handling
 // ---------------------------------------------------------------------------
 
-// handleProvidersKeyMsg handles key events when the Providers tab is active.
-// It dispatches based on the current providersTabState.
-func handleProvidersKeyMsg(m model, msg tea.KeyMsg) (model, tea.Cmd) {
-	switch m.providersState {
-	// -----------------------------------------------------------------------
-	// Provider list state
-	// -----------------------------------------------------------------------
-	case pList:
-		switch msg.String() {
-		case "a":
-			// Open the provider creation wizard.
-			m.providersState = pAddProvider
-			m.providerForm = forms.NewProviderForm()
-			cmd := m.providerForm.Init()
-			return m, cmd
+func handleProvidersContentEnter(m model) (tea.Model, tea.Cmd) {
+	c := m.contentCursor
 
-		case "n":
-			// Open the single model creation form.
-			m.providersState = pAddModel
-			m.modelForm = forms.NewModelForm()
-			cmd := m.modelForm.Init()
-			return m, cmd
-
-		case "enter":
-			// Edit the selected provider.
-			if m.selectedProviderIdx < len(m.providerListItems) {
-				item := m.providerListItems[m.selectedProviderIdx]
-				m.providersState = pEditProvider
-				m.providerForm = forms.NewProviderFormEdit(item.provider)
-				cmd := m.providerForm.Init()
-				return m, cmd
-			}
-
-		case "d":
-			// Delete the selected provider file.
-			if m.selectedProviderIdx < len(m.providerListItems) {
-				item := m.providerListItems[m.selectedProviderIdx]
-				if err := deleteProviderFile(item.filePath); err == nil {
-					// Reload the list.
-					providers, singles, _ := listProviderFiles(m.cfg.ModelsDir)
-					m.providerListItems = providers
-					m.singleModelItems = singles
-					if m.selectedProviderIdx >= len(m.providerListItems) {
-						m.selectedProviderIdx = max(0, len(m.providerListItems)-1)
-					}
-					// Set restart-required if gateway is running.
-					if m.gwLifecycle.IsRunning() {
-						m.restartRequired = true
-					}
-				}
-			}
-			return m, nil
-
-		case "j", "down":
-			total := len(m.providerListItems) + len(m.singleModelItems)
-			if total > 0 {
-				m.selectedProviderIdx++
-				if m.selectedProviderIdx >= len(m.providerListItems) {
-					m.selectedProviderIdx = 0
-				}
-			}
-			return m, nil
-
-		case "k", "up":
-			total := len(m.providerListItems) + len(m.singleModelItems)
-			if total > 0 {
-				m.selectedProviderIdx--
-				if m.selectedProviderIdx < 0 {
-					m.selectedProviderIdx = len(m.providerListItems) - 1
-				}
-			}
+	// Action buttons (0, 1, 2)
+	if c == 0 {
+		m.providersState = pAddProvider
+		m.providerForm = forms.NewProviderForm()
+		return m, m.providerForm.Init()
+	}
+	if c == 1 {
+		m.providersState = pAddModel
+		m.modelForm = forms.NewModelForm()
+		return m, m.modelForm.Init()
+	}
+	if c == 2 {
+		if len(m.providerListItems) == 0 && len(m.singleModelItems) == 0 {
 			return m, nil
 		}
+		// Delete selected provider (if cursor is on one)
+		provIdx := c - 3
+		if provIdx >= 0 && provIdx < len(m.providerListItems) {
+			item := m.providerListItems[provIdx]
+			if err := deleteProviderFile(item.filePath); err == nil {
+				providers, singles, _ := listProviderFiles(m.cfg.ModelsDir)
+				m.providerListItems = providers
+				m.singleModelItems = singles
+				if m.gwLifecycle.IsRunning() {
+					m.restartRequired = true
+				}
+			}
+		}
+		return m, nil
+	}
 
-	// -----------------------------------------------------------------------
-	// Provider form states (add / edit)
-	// -----------------------------------------------------------------------
+	// Provider list items (index 3+)
+	provIdx := c - 3
+	if provIdx >= 0 && provIdx < len(m.providerListItems) {
+		item := m.providerListItems[provIdx]
+		m.providersState = pEditProvider
+		m.providerForm = forms.NewProviderFormEdit(item.provider)
+		return m, m.providerForm.Init()
+	}
+
+	// Single model items
+	singleIdx := c - 3 - len(m.providerListItems)
+	if singleIdx >= 0 && singleIdx < len(m.singleModelItems) {
+		item := m.singleModelItems[singleIdx]
+		m.providersState = pEditModel
+		def := &models.ModelDef{
+			ID:    item.model.ID,
+			Name:  item.model.Name,
+			Model: item.model.ConnConfig.Model,
+			Type:  item.model.Type,
+			Mode:  item.model.Mode,
+			Route: item.model.Route,
+		}
+		m.modelForm = forms.NewModelFormEdit(def)
+		return m, m.modelForm.Init()
+	}
+
+	return m, nil
+}
+
+// ---------------------------------------------------------------------------
+// Key handling (forms only — list navigation is handled by model.go)
+// ---------------------------------------------------------------------------
+
+// handleProvidersKeyMsg handles key events for provider/model forms.
+func handleProvidersKeyMsg(m model, msg tea.KeyMsg) (model, tea.Cmd) {
+	switch m.providersState {
 	case pAddProvider, pEditProvider:
 		var cmd tea.Cmd
 		m.providerForm, cmd = m.providerForm.Update(msg)
 		if m.providerForm.Finished() {
-			// Save the provider file.
 			pf := m.providerForm.ToProviderFile()
 			_, err := saveProviderFile(pf, m.cfg.ModelsDir)
 			if err == nil {
@@ -305,25 +314,20 @@ func handleProvidersKeyMsg(m model, msg tea.KeyMsg) (model, tea.Cmd) {
 					m.restartRequired = true
 				}
 			}
-			// Reload the provider list.
 			providers, singles, _ := listProviderFiles(m.cfg.ModelsDir)
 			m.providerListItems = providers
 			m.singleModelItems = singles
 			m.providersState = pList
-		}
+			}
 		if m.providerForm.Cancelled() {
 			m.providersState = pList
 		}
 		return m, cmd
 
-	// -----------------------------------------------------------------------
-	// Model form states (add / edit)
-	// -----------------------------------------------------------------------
 	case pAddModel, pEditModel:
 		var cmd tea.Cmd
 		m.modelForm, cmd = m.modelForm.Update(msg)
 		if m.modelForm.Finished() {
-			// Save the model config file.
 			mf := m.modelForm.ToModelConfigFile()
 			_, err := saveModelConfigFile(mf, m.cfg.ModelsDir)
 			if err == nil {
@@ -331,12 +335,11 @@ func handleProvidersKeyMsg(m model, msg tea.KeyMsg) (model, tea.Cmd) {
 					m.restartRequired = true
 				}
 			}
-			// Reload the list.
 			providers, singles, _ := listProviderFiles(m.cfg.ModelsDir)
 			m.providerListItems = providers
 			m.singleModelItems = singles
 			m.providersState = pList
-		}
+			}
 		if m.modelForm.Cancelled() {
 			m.providersState = pList
 		}

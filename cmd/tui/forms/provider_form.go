@@ -88,7 +88,7 @@ func newPasswordInput(prompt string, width int) textinput.Model {
 }
 
 // Init returns a tea.Cmd that focuses the first input field.
-func (m ProviderFormModel) Init() tea.Cmd {
+func (m *ProviderFormModel) Init() tea.Cmd {
 	return m.activeInput().Focus()
 }
 
@@ -121,9 +121,7 @@ func (m ProviderFormModel) Update(msg tea.Msg) (ProviderFormModel, tea.Cmd) {
 				return m, nil
 			}
 			if ok, errMsg := m.validateStep(); ok {
-				// Advance to next step and focus the new input.
 				m.step++
-				// Clear errors on successful advance.
 				m.errors = nil
 				cmd := m.activeInput().Focus()
 				return m, cmd
@@ -136,21 +134,21 @@ func (m ProviderFormModel) Update(msg tea.Msg) (ProviderFormModel, tea.Cmd) {
 			m.cancelled = true
 			return m, nil
 		}
-
-		// Delegate to the active textinput for text entry.
-		old := *m.activeInput()
-		updated, cmd := old.Update(msg)
-		*m.activeInput() = updated
-		// Clear step-level errors when user types.
-		m.errors = nil
-		return m, cmd
+		// For all other keys, fall through to delegate to textinput below.
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		return m, nil
 	}
 
-	return m, nil
+	// Delegate all unhandled messages to the active textinput.
+	// This is critical: messages like BlurMsg/FocusMsg from textinput.Init()
+	// are not KeyPressMsg and must still reach the textinput.
+	old := *m.activeInput()
+	updated, cmd := old.Update(msg)
+	*m.activeInput() = updated
+	m.errors = nil
+	return m, cmd
 }
 
 // validateStep validates the current wizard step and returns an error message

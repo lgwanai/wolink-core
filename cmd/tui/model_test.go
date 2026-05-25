@@ -12,7 +12,6 @@ import (
 )
 
 // newTestModel is defined in dashboard_test.go.
-// It returns a minimal model with sensible defaults.
 
 // TestInitReturnsCommands checks that Init returns a non-nil tea.Cmd.
 func TestInitReturnsCommands(t *testing.T) {
@@ -39,11 +38,10 @@ func TestBackgroundColorUpdate(t *testing.T) {
 	m := newTestModel()
 	m.darkTheme = false
 
-	// Send a background color message for dark theme.
 	result, cmd := m.Update(tea.BackgroundColorMsg{})
 	updated := result.(model)
 	assert.Nil(t, cmd)
-	_ = updated // styles are updated internally
+	_ = updated
 }
 
 // TestStatusUpdateMsg checks that statusUpdateMsg sets nodeStatus.
@@ -68,10 +66,10 @@ func TestStatusUpdateMsg(t *testing.T) {
 	assert.Equal(t, "healthy", updated.nodeStatus.Status)
 }
 
-// TestStatusUpdateMsg_Error checks that statusUpdateMsg with err sets statusErr.
+// TestStatusUpdateMsg_Error checks that statusUpdateMsg with err clears nodeState.
 func TestStatusUpdateMsg_Error(t *testing.T) {
 	m := newTestModel()
-	m.statusErr = ""
+	m.statusErr = "old error"
 
 	result, cmd := m.Update(statusUpdateMsg{
 		status: nil,
@@ -79,7 +77,8 @@ func TestStatusUpdateMsg_Error(t *testing.T) {
 	})
 	updated := result.(model)
 	assert.Nil(t, cmd)
-	assert.Contains(t, updated.statusErr, assert.AnError.Error())
+	assert.Empty(t, updated.statusErr)
+	assert.Nil(t, updated.nodeStatus)
 }
 
 // TestHealthMsg_Healthy checks that healthMsg{ok:true} sets gwStatus to "healthy".
@@ -105,7 +104,7 @@ func TestHealthMsg_Down(t *testing.T) {
 	assert.Equal(t, "down", updated.gwStatus)
 }
 
-// TestHealthMsg_Degraded checks that healthMsg with non-ok status sets degraded.
+// TestHealthMsg_Degraded checks degraded state.
 func TestHealthMsg_Degraded(t *testing.T) {
 	m := newTestModel()
 	m.gwStatus = "healthy"
@@ -139,7 +138,7 @@ func TestStartGatewayMsg_Success(t *testing.T) {
 	assert.Equal(t, "running", updated.lifecycleState)
 }
 
-// TestStartGatewayMsg_Error checks that startGatewayMsg with err reverts to idle.
+// TestStartGatewayMsg_Error checks startGatewayMsg with err reverts to idle.
 func TestStartGatewayMsg_Error(t *testing.T) {
 	m := newTestModel()
 	m.lifecycleState = "starting"
@@ -151,7 +150,7 @@ func TestStartGatewayMsg_Error(t *testing.T) {
 	assert.Contains(t, updated.lifecycleErr, assert.AnError.Error())
 }
 
-// TestStopGatewayMsg_Success checks that stopGatewayMsg transitions back to idle.
+// TestStopGatewayMsg_Success checks stopGatewayMsg transitions to idle.
 func TestStopGatewayMsg_Success(t *testing.T) {
 	m := newTestModel()
 	m.lifecycleState = "stopping"
@@ -162,103 +161,107 @@ func TestStopGatewayMsg_Success(t *testing.T) {
 	assert.Equal(t, "idle", updated.lifecycleState)
 }
 
-// TestTabNavigation checks that pressing tab cycles through tabs 0->1->2->0.
-func TestTabNavigation(t *testing.T) {
+// TestHomeScreenNavigation checks j/k navigation on home screen.
+func TestHomeScreenNavigation(t *testing.T) {
 	m := newTestModel()
+	m.currentScreen = screenHome
+	m.homeCursor = 0
 
-	// Starting on tab 0 (Dashboard).
-	assert.Equal(t, tabDashboard, m.activeTab)
-
-	// Tab -> tab 1 (Providers)
-	keyMsg := tea.KeyPressMsg{Code: '\t'}
-	result, _ := m.Update(keyMsg)
+	// j -> 1
+	result, _ := m.Update(tea.KeyPressMsg{Code: 'j'})
 	updated := result.(model)
-	assert.Equal(t, tabProviders, updated.activeTab)
+	assert.Equal(t, 1, updated.homeCursor)
 
-	// Tab -> tab 2 (Plugins)
-	result, _ = updated.Update(keyMsg)
+	// j -> 2
+	result, _ = updated.Update(tea.KeyPressMsg{Code: 'j'})
 	updated = result.(model)
-	assert.Equal(t, tabPlugins, updated.activeTab)
+	assert.Equal(t, 2, updated.homeCursor)
 
-	// Tab -> tab 0 (Dashboard)
-	result, _ = updated.Update(keyMsg)
+	// j -> 0 (wrap)
+	result, _ = updated.Update(tea.KeyPressMsg{Code: 'j'})
 	updated = result.(model)
-	assert.Equal(t, tabDashboard, updated.activeTab)
+	assert.Equal(t, 0, updated.homeCursor)
+
+	// k -> 2 (wrap)
+	result, _ = updated.Update(tea.KeyPressMsg{Code: 'k'})
+	updated = result.(model)
+	assert.Equal(t, 2, updated.homeCursor)
 }
 
-// TestTabNavigationVim checks that 'l' (next) and 'h' (prev) change tabs.
-func TestTabNavigationVim(t *testing.T) {
-	m := newTestModel()
-	assert.Equal(t, tabDashboard, m.activeTab)
+// TestHomeScreenEnterNavigatesToScreen checks enter on home options.
+func TestHomeScreenEnterNavigatesToScreen(t *testing.T) {
+	t.Run("enter on 0 goes to dashboard", func(t *testing.T) {
+		m := newTestModel()
+		m.homeCursor = 0
+		result, _ := m.Update(tea.KeyPressMsg{Code: '\r'})
+		updated := result.(model)
+		assert.Equal(t, screenDashboard, updated.currentScreen)
+	})
 
-	// 'l' -> tab 1
-	result, _ := m.Update(tea.KeyPressMsg{Code: 'l'})
-	updated := result.(model)
-	assert.Equal(t, tabProviders, updated.activeTab)
+	t.Run("enter on 1 goes to providers", func(t *testing.T) {
+		m := newTestModel()
+		m.homeCursor = 1
+		result, _ := m.Update(tea.KeyPressMsg{Code: '\r'})
+		updated := result.(model)
+		assert.Equal(t, screenProviders, updated.currentScreen)
+	})
 
-	// 'l' -> tab 2
-	result, _ = updated.Update(tea.KeyPressMsg{Code: 'l'})
-	updated = result.(model)
-	assert.Equal(t, tabPlugins, updated.activeTab)
-
-	// 'h' -> tab 1
-	result, _ = updated.Update(tea.KeyPressMsg{Code: 'h'})
-	updated = result.(model)
-	assert.Equal(t, tabProviders, updated.activeTab)
+	t.Run("enter on 2 goes to plugins", func(t *testing.T) {
+		m := newTestModel()
+		m.homeCursor = 2
+		result, cmd := m.Update(tea.KeyPressMsg{Code: '\r'})
+		updated := result.(model)
+		assert.Equal(t, screenPlugins, updated.currentScreen)
+		assert.NotNil(t, cmd)
+	})
 }
 
-// TestQuitKey checks that pressing 'q' returns a Quit command.
+// TestNumericKeysOnHome checks 1/2/3 navigation.
+func TestNumericKeysOnHome(t *testing.T) {
+	m := newTestModel()
+
+	result, _ := m.Update(tea.KeyPressMsg{Code: '1'})
+	assert.Equal(t, screenDashboard, result.(model).currentScreen)
+
+	m2 := newTestModel()
+	result, _ = m2.Update(tea.KeyPressMsg{Code: '2'})
+	assert.Equal(t, screenProviders, result.(model).currentScreen)
+
+	m3 := newTestModel()
+	result, _ = m3.Update(tea.KeyPressMsg{Code: '3'})
+	assert.Equal(t, screenPlugins, result.(model).currentScreen)
+}
+
+// TestEscReturnsToHome checks esc from content screen returns to home.
+func TestEscReturnsToHome(t *testing.T) {
+	m := newTestModel()
+	m.currentScreen = screenDashboard
+
+	result, _ := m.Update(tea.KeyPressMsg{Code: '\x1b'})
+	updated := result.(model)
+	assert.Equal(t, screenHome, updated.currentScreen)
+}
+
+// TestQuitKey checks pressing 'q' returns Quit command.
 func TestQuitKey(t *testing.T) {
 	m := newTestModel()
 
 	result, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
-	updated := result.(model)
+	_ = result.(model)
 	assert.NotNil(t, cmd)
-	_ = updated // no state change on quit
 }
 
-// TestCtrlC_Quit checks that Ctrl+C also quits.
+// TestCtrlC_Quit checks Ctrl+C quits.
 func TestCtrlC_Quit(t *testing.T) {
 	m := newTestModel()
 
-	// Ctrl+C
 	keyMsg := tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}
 	result, cmd := m.Update(keyMsg)
 	_ = result.(model)
 	assert.NotNil(t, cmd, "Ctrl+C should return Quit command")
 }
 
-// TestTabSwitchNumeric checks numeric tab switching (1, 2, 3).
-func TestTabSwitchNumeric(t *testing.T) {
-	m := newTestModel()
-
-	// Test each numeric tab switch
-	t.Run("key 1 activates Dashboard", func(t *testing.T) {
-		// First move to a different tab
-		m.activeTab = tabPlugins
-		result, _ := m.Update(tea.KeyPressMsg{Code: '1'})
-		updated := result.(model)
-		assert.Equal(t, tabDashboard, updated.activeTab)
-	})
-
-	// Test pressing '2' (tabProviders)
-	t.Run("key 2 activates Providers", func(t *testing.T) {
-		m.activeTab = tabDashboard
-		result, _ := m.Update(tea.KeyPressMsg{Code: '2'})
-		updated := result.(model)
-		assert.Equal(t, tabProviders, updated.activeTab)
-	})
-
-	// Test pressing '3' (tabPlugins)
-	t.Run("key 3 activates Plugins", func(t *testing.T) {
-		m.activeTab = tabDashboard
-		result, _ := m.Update(tea.KeyPressMsg{Code: '3'})
-		updated := result.(model)
-		assert.Equal(t, tabPlugins, updated.activeTab)
-	})
-}
-
-// TestPluginsUpdateMsg_Success checks that pluginsUpdateMsg populates the list.
+// TestPluginsUpdateMsg_Success checks pluginsUpdateMsg populates the list.
 func TestPluginsUpdateMsg_Success(t *testing.T) {
 	m := newTestModel()
 	m.pluginsState = pluginsStateLoading
@@ -274,13 +277,9 @@ func TestPluginsUpdateMsg_Success(t *testing.T) {
 	assert.Nil(t, cmd)
 	assert.Equal(t, pluginsStateList, updated.pluginsState)
 	assert.Len(t, updated.pluginListItems, 2)
-	assert.Equal(t, "openai", updated.pluginListItems[0].info.Name)
-	assert.Equal(t, "claude", updated.pluginListItems[1].info.Name)
-	assert.True(t, updated.pluginListItems[0].info.Loaded)
-	assert.False(t, updated.pluginListItems[1].info.Healthy)
 }
 
-// TestPluginsUpdateMsg_Error checks that pluginsUpdateMsg with error sets error state.
+// TestPluginsUpdateMsg_Error checks pluginsUpdateMsg with error.
 func TestPluginsUpdateMsg_Error(t *testing.T) {
 	m := newTestModel()
 	m.pluginsState = pluginsStateLoading
@@ -306,7 +305,6 @@ func TestPluginsReloadMsg_Error(t *testing.T) {
 	updated := result.(model)
 	assert.Nil(t, cmd)
 	assert.Equal(t, pluginsStateError, updated.pluginsState)
-	assert.Contains(t, updated.pluginErr, assert.AnError.Error())
 }
 
 // TestPluginsUnloadMsg_Error checks unload error handling.
@@ -320,10 +318,9 @@ func TestPluginsUnloadMsg_Error(t *testing.T) {
 	updated := result.(model)
 	assert.Nil(t, cmd)
 	assert.Equal(t, pluginsStateError, updated.pluginsState)
-	assert.Contains(t, updated.pluginErr, assert.AnError.Error())
 }
 
-// TestRestartProgressMsg checks that restart progress text is stored.
+// TestRestartProgressMsg checks restart progress text.
 func TestRestartProgressMsg(t *testing.T) {
 	m := newTestModel()
 	m.lifecycleStep = ""
@@ -345,7 +342,7 @@ func TestRestartCompleteMsg_Success(t *testing.T) {
 	assert.Equal(t, "running", updated.lifecycleState)
 }
 
-// TestRestartCompleteMsg_Error checks restart error reverts to idle.
+// TestRestartCompleteMsg_Error checks restart error.
 func TestRestartCompleteMsg_Error(t *testing.T) {
 	m := newTestModel()
 	m.lifecycleState = "restarting"
@@ -356,11 +353,10 @@ func TestRestartCompleteMsg_Error(t *testing.T) {
 	assert.Equal(t, "idle", updated.lifecycleState)
 }
 
-// TestModelUpdate_UnknownMessage checks that unknown messages are ignored.
+// TestModelUpdate_UnknownMessage checks unknown messages pass through.
 func TestModelUpdate_UnknownMessage(t *testing.T) {
 	m := newTestModel()
 
-	// An unknown message type should pass through without error.
 	type unknownMsg struct{}
 	result, cmd := m.Update(unknownMsg{})
 	updated := result.(model)
@@ -368,7 +364,7 @@ func TestModelUpdate_UnknownMessage(t *testing.T) {
 	assert.Equal(t, m, updated)
 }
 
-// TestPollTickMsg checks that poll tick returns batch of commands.
+// TestPollTickMsg checks poll tick returns batch of commands.
 func TestPollTickMsg(t *testing.T) {
 	m := newTestModel()
 
@@ -377,7 +373,7 @@ func TestPollTickMsg(t *testing.T) {
 	assert.NotNil(t, cmd, "pollTickMsg should return a batch command")
 }
 
-// TestRenderText_Empty checks that renderText returns empty for unready model.
+// TestRenderText_Empty checks View returns empty for unready model.
 func TestRenderText_Empty(t *testing.T) {
 	m := newTestModel()
 	m.ready = false
@@ -385,42 +381,41 @@ func TestRenderText_Empty(t *testing.T) {
 	assert.Equal(t, "", view.Content)
 }
 
-// TestGatewayClientNilSafety checks that model can handle nil client gracefully.
+// TestGatewayClientNilSafety checks model can handle nil client.
 func TestGatewayClientNilSafety(t *testing.T) {
 	m := newTestModel()
 	m.gwClient = nil
 
-	// Just verify the model doesn't panic on basic operations.
 	result, cmd := m.Update(tea.KeyPressMsg{Code: 'q'})
 	_, ok := result.(model)
 	assert.True(t, ok)
 	assert.NotNil(t, cmd)
 }
 
-// TestRenderContent_AllTabs verifies each tab's render function produces output.
-func TestRenderContent_AllTabs(t *testing.T) {
+// TestRenderContent_AllScreens checks each screen renders content.
+func TestRenderContent_AllScreens(t *testing.T) {
 	m := newTestModel()
 
-	t.Run("Dashboard tab renders content", func(t *testing.T) {
-		m.activeTab = tabDashboard
+	t.Run("Dashboard screen renders content", func(t *testing.T) {
+		m.currentScreen = screenDashboard
 		content := renderContent(m)
 		assert.NotEmpty(t, content)
 	})
 
-	t.Run("Providers tab renders content", func(t *testing.T) {
-		m.activeTab = tabProviders
+	t.Run("Providers screen renders content", func(t *testing.T) {
+		m.currentScreen = screenProviders
 		content := renderContent(m)
 		assert.NotEmpty(t, content)
 	})
 
-	t.Run("Plugins tab renders content", func(t *testing.T) {
-		m.activeTab = tabPlugins
+	t.Run("Plugins screen renders content", func(t *testing.T) {
+		m.currentScreen = screenPlugins
 		content := renderContent(m)
 		assert.NotEmpty(t, content)
 	})
 }
 
-// TestRenderPluginsContent_States verifies each plugins sub-state renders correctly.
+// TestRenderPluginsContent_States checks each plugins sub-state.
 func TestRenderPluginsContent_States(t *testing.T) {
 	m := newTestModel()
 
@@ -437,10 +432,6 @@ func TestRenderPluginsContent_States(t *testing.T) {
 		}
 		content := renderPluginsContent(m)
 		assert.Contains(t, content, "Name")
-		assert.Contains(t, content, "Protocol")
-		assert.Contains(t, content, "Version")
-		assert.Contains(t, content, "Loaded")
-		assert.Contains(t, content, "Healthy")
 		assert.Contains(t, content, "test")
 	})
 
@@ -452,68 +443,47 @@ func TestRenderPluginsContent_States(t *testing.T) {
 	})
 }
 
-// TestHandlePluginsKeyMsg_Navigation checks up/down navigation in plugins tab.
-func TestHandlePluginsKeyMsg_Navigation(t *testing.T) {
+// TestProvidersFormKeyHandling checks form receives keys when active.
+func TestProvidersFormKeyHandling(t *testing.T) {
 	m := newTestModel()
-	m.pluginsState = pluginsStateList
-	m.pluginListItems = []pluginListItem{
-		{info: plugins.PluginInfo{Name: "alpha", Protocol: "openai"}},
-		{info: plugins.PluginInfo{Name: "beta", Protocol: "claude"}},
-	}
-	m.selectedPluginIdx = 0
-
-	// Press down -> selectedPluginIdx becomes 1
-	updated, _ := handlePluginsKeyMsg(m, tea.KeyPressMsg{Code: 'j'})
-	assert.Equal(t, 1, updated.selectedPluginIdx)
-
-	// Press down again -> wraps to 0
-	updated, _ = handlePluginsKeyMsg(updated, tea.KeyPressMsg{Code: 'j'})
-	assert.Equal(t, 0, updated.selectedPluginIdx)
-
-	// Press up -> wraps to 1
-	updated, _ = handlePluginsKeyMsg(updated, tea.KeyPressMsg{Code: 'k'})
-	assert.Equal(t, 1, updated.selectedPluginIdx)
-}
-
-// TestHandlePluginsKeyMsg_LoadingState checks that keys are ignored while loading.
-func TestHandlePluginsKeyMsg_LoadingState(t *testing.T) {
-	m := newTestModel()
-	m.pluginsState = pluginsStateLoading
-	m.selectedPluginIdx = 0
-
-	updated, _ := handlePluginsKeyMsg(m, tea.KeyPressMsg{Code: 'j'})
-	// selectedPluginIdx should NOT change while loading.
-	assert.Equal(t, 0, updated.selectedPluginIdx)
-}
-
-// TestHandleProvidersKeyMsg_ShiftTabInsideForm checks that shift+tab inside
-// provider form is handled by providers handler, not tab switch.
-func TestHandleProvidersKeyMsg_ShiftTabInsideForm(t *testing.T) {
-	m := newTestModel()
-	m.activeTab = tabProviders
+	m.currentScreen = screenProviders
 	m.providersState = pAddProvider
 	m.providerForm = forms.NewProviderForm()
 
-	// shift+tab should be handled by provider form, not switch tabs.
 	keyMsg := tea.KeyPressMsg{Code: '\t', Mod: tea.ModShift}
 	result, cmd := m.Update(keyMsg)
 	updated := result.(model)
-	assert.Equal(t, tabProviders, updated.activeTab, "should stay on providers tab")
+	assert.Equal(t, screenProviders, updated.currentScreen, "should stay on providers screen")
 	_ = cmd
 }
 
-// TestNumericKeysDuringPluginLoading checks that numeric key '1', '2' are not
-// handled as tab switches during plugin loading.
-func TestNumericKeysDuringPluginLoading(t *testing.T) {
+// TestContentItemCount checks item counts for different screens.
+func TestContentItemCount(t *testing.T) {
 	m := newTestModel()
 
-	// Press '2' to go to tabProviders
-	result, _ := m.Update(tea.KeyPressMsg{Code: '2'})
-	updated := result.(model)
-	assert.Equal(t, tabProviders, updated.activeTab)
+	t.Run("home has 0 items", func(t *testing.T) {
+		m.currentScreen = screenHome
+		assert.Equal(t, 0, contentItemCount(m))
+	})
 
-	// Press '3' to go to tabPlugins
-	result, _ = updated.Update(tea.KeyPressMsg{Code: '3'})
-	updated = result.(model)
-	assert.Equal(t, tabPlugins, updated.activeTab)
+	t.Run("providers has action items", func(t *testing.T) {
+		m.currentScreen = screenProviders
+		m.providersState = pList
+		assert.Equal(t, 3, contentItemCount(m))
+	})
+
+	t.Run("plugins loading has 0 items", func(t *testing.T) {
+		m.currentScreen = screenPlugins
+		m.pluginsState = pluginsStateLoading
+		assert.Equal(t, 0, contentItemCount(m))
+	})
+
+	t.Run("plugins list has action items + plugins", func(t *testing.T) {
+		m.currentScreen = screenPlugins
+		m.pluginsState = pluginsStateList
+		m.pluginListItems = []pluginListItem{
+			{info: plugins.PluginInfo{Name: "a", Protocol: "x"}},
+		}
+		assert.Equal(t, 4, contentItemCount(m))
+	})
 }

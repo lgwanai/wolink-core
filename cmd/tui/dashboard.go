@@ -3,37 +3,45 @@ package main
 import (
 	"fmt"
 	"strings"
-	"time"
 
-	"charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 )
 
-// renderDashboard renders the Dashboard tab content with status panels,
-// live metrics, lifecycle action buttons, and error display.
+// renderDashboard renders the Dashboard screen content with status panels,
+// lifecycle actions, live metrics, and error display.
 func renderDashboard(m model) string {
-	s := strings.Builder{}
+	// Lifecycle actions as visible menu items
+	actions := renderDashboardActions(m)
 
-	// Panel 1: Gateway Status
-	s.WriteString(renderGatewayStatusPanel(m))
+	panel1 := renderGatewayStatusPanel(m)
+	panel2 := renderNodeMetricsPanel(m)
+	panel3 := renderLifecyclePanel(m)
+	panel4 := renderErrorPanel(m)
 
-	// Panel 2: Node Metrics
-	s.WriteString(renderNodeMetricsPanel(m))
-
-	// Panel 3: Quick Actions
-	s.WriteString(renderQuickActionsPanel(m))
-
-	// Panel 4: Lifecycle State (only if active)
-	if lifecycle := renderLifecyclePanel(m); lifecycle != "" {
-		s.WriteString(lifecycle)
+	var panels []string
+	if actions != "" {
+		panels = append(panels, actions)
+	}
+	for _, p := range []string{panel1, panel2, panel3, panel4} {
+		if p != "" {
+			panels = append(panels, p)
+		}
 	}
 
-	// Panel 5: Errors
-	if errPanel := renderErrorPanel(m); errPanel != "" {
-		s.WriteString(errPanel)
-	}
+	return lipgloss.JoinVertical(lipgloss.Top, panels...)
+}
 
-	return s.String()
+func renderDashboardActions(m model) string {
+	var labels []string
+	if m.lifecycleState == "idle" {
+		labels = []string{"[Start Gateway]"}
+	} else if m.lifecycleState == "running" {
+		labels = []string{"[Stop Gateway]", "[Restart Gateway]"}
+	}
+	if len(labels) == 0 {
+		return ""
+	}
+	return renderContentActions(m, labels)
 }
 
 func renderGatewayStatusPanel(m model) string {
@@ -66,18 +74,6 @@ func renderNodeMetricsPanel(m model) string {
 	return lipgloss.NewStyle().Margin(0, 2, 0, 1).Render(header + strings.Join(rows, "\n") + "\n")
 }
 
-func renderQuickActionsPanel(m model) string {
-	header := m.styles.headerStyle.Render("--- Quick Actions ---") + "\n"
-	actions := []string{
-		"  Tab / l : Next tab",
-		"  q / Ctrl+C : Quit",
-		"  Ctrl+S : Start gateway",
-		"  Ctrl+X : Stop gateway",
-		"  Ctrl+R : Restart gateway",
-	}
-	return lipgloss.NewStyle().Margin(0, 2, 0, 1).Render(header + m.styles.helpStyle.Render(strings.Join(actions, "\n")) + "\n")
-}
-
 func renderLifecyclePanel(m model) string {
 	if m.lifecycleState == "idle" || m.lifecycleState == "running" {
 		return ""
@@ -108,31 +104,4 @@ func renderErrorPanel(m model) string {
 	}
 	header := m.styles.errorStyle.Render("--- Errors ---") + "\n"
 	return lipgloss.NewStyle().Margin(0, 2, 0, 1).Render(header + m.styles.errorStyle.Render("  "+m.statusErr) + "\n")
-}
-
-// handleDashboardKeyMsg handles key events when the Dashboard tab is active.
-func handleDashboardKeyMsg(m model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.lifecycleState != "idle" && m.lifecycleState != "running" {
-		return m, nil
-	}
-	switch msg.String() {
-	case "ctrl+s":
-		if m.lifecycleState == "idle" {
-			m.lifecycleState = "starting"
-			m.lifecycleErr = ""
-			return m, startGatewayCmd(m.gwLifecycle, m.cfg.GatewayURL)
-		}
-	case "ctrl+x":
-		if m.lifecycleState != "idle" {
-			m.lifecycleState = "stopping"
-			return m, stopGatewayCmd(m.gwLifecycle, 30*time.Second)
-		}
-	case "ctrl+r":
-		if m.lifecycleState == "idle" || m.lifecycleState == "running" {
-			m.lifecycleState = "restarting"
-			m.lifecycleErr = ""
-			return m, restartGatewayCmd(m.gwLifecycle, 30*time.Second)
-		}
-	}
-	return m, nil
 }

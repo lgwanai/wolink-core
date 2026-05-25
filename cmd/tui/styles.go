@@ -9,9 +9,16 @@ import (
 // styles holds all Lipgloss style definitions for the TUI.
 // Colors adapt to light/dark terminal themes via lipgloss.LightDark.
 type styles struct {
-	// Tab bar
-	tabActive   lipgloss.Style
-	tabInactive lipgloss.Style
+	// Home screen
+	homeTitle     lipgloss.Style
+	homeItem      lipgloss.Style
+	homeActive    lipgloss.Style
+	homeActiveDesc lipgloss.Style
+
+	// Content action items
+	actionItem   lipgloss.Style
+	actionActive lipgloss.Style
+	actionKey    lipgloss.Style
 
 	// Status indicators
 	statusGreen  lipgloss.Style
@@ -20,10 +27,11 @@ type styles struct {
 	statusBlue   lipgloss.Style
 
 	// Layout
-	headerStyle  lipgloss.Style
-	contentArea  lipgloss.Style
-	statusBar    lipgloss.Style
-	helpStyle    lipgloss.Style
+	headerStyle lipgloss.Style
+	contentArea lipgloss.Style
+	statusBar   lipgloss.Style
+	helpBar     lipgloss.Style
+	helpStyle   lipgloss.Style
 
 	// Semantic
 	errorStyle   lipgloss.Style
@@ -40,12 +48,33 @@ func ld(isDark bool, light, dark color.Color) color.Color {
 // newStyles creates a styles struct with colors adapted to the terminal theme.
 func newStyles(isDark bool) styles {
 	return styles{
-		tabActive: lipgloss.NewStyle().
-			Background(ld(isDark, lipgloss.Color("#cccccc"), lipgloss.Color("#333333"))).
-			Foreground(ld(isDark, lipgloss.Color("#000000"), lipgloss.Color("#ffffff"))),
-		tabInactive: lipgloss.NewStyle().
-			Background(ld(isDark, lipgloss.Color("#eeeeee"), lipgloss.Color("#111111"))).
+		homeTitle: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ld(isDark, lipgloss.Color("#0066cc"), lipgloss.Color("#3399ff"))),
+		homeItem: lipgloss.NewStyle().
+			Foreground(ld(isDark, lipgloss.Color("#333333"), lipgloss.Color("#cccccc"))),
+		homeActive: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(ld(isDark, lipgloss.Color("#ffffff"), lipgloss.Color("#ffffff"))).
+			Background(ld(isDark, lipgloss.Color("#3399ff"), lipgloss.Color("#3399ff"))).
+			Padding(0, 1),
+		homeActiveDesc: lipgloss.NewStyle().
+			Foreground(ld(isDark, lipgloss.Color("#0066cc"), lipgloss.Color("#66bbff"))),
+
+		actionItem: lipgloss.NewStyle().
+			Padding(0, 1),
+		actionActive: lipgloss.NewStyle().
+			Background(ld(isDark, lipgloss.Color("#cccccc"), lipgloss.Color("#444444"))).
+			Padding(0, 1),
+		actionKey: lipgloss.NewStyle().
+			Foreground(ld(isDark, lipgloss.Color("#0066aa"), lipgloss.Color("#ffaa00"))),
+		helpBar: lipgloss.NewStyle().
+			BorderTop(true).
+			BorderStyle(lipgloss.NormalBorder()).
 			Foreground(ld(isDark, lipgloss.Color("#666666"), lipgloss.Color("#aaaaaa"))),
+		helpStyle: lipgloss.NewStyle().
+			Faint(true).Italic(true).
+			Foreground(ld(isDark, lipgloss.Color("#888888"), lipgloss.Color("#888888"))),
 
 		statusGreen: lipgloss.NewStyle().
 			Foreground(ld(isDark, lipgloss.Color("#00aa00"), lipgloss.Color("#00ff00"))),
@@ -65,9 +94,6 @@ func newStyles(isDark bool) styles {
 		statusBar: lipgloss.NewStyle().
 			BorderTop(true).
 			Foreground(ld(isDark, lipgloss.Color("#333333"), lipgloss.Color("#cccccc"))),
-		helpStyle: lipgloss.NewStyle().
-			Faint(true).Italic(true).
-			Foreground(ld(isDark, lipgloss.Color("#888888"), lipgloss.Color("#888888"))),
 
 		errorStyle: lipgloss.NewStyle().
 			Foreground(ld(isDark, lipgloss.Color("#aa0000"), lipgloss.Color("#ff0000"))),
@@ -82,8 +108,7 @@ func newStyles(isDark bool) styles {
 }
 
 // RenderStatusDot returns a colored dot character using the appropriate
-// status style. status should be one of: "healthy"/"ok" (green),
-// "warning" (yellow), "error" (red), or anything else (blue/info).
+// status style.
 func (s styles) RenderStatusDot(status string) string {
 	switch status {
 	case "healthy", "ok":

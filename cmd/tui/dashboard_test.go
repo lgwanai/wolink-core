@@ -3,24 +3,23 @@ package main
 import (
 	"testing"
 
-	"charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
 	"wolink-core/internal/services"
 )
 
-// newTestModel creates a minimal model for testing dashboard rendering.
+// newTestModel creates a minimal model for testing.
 func newTestModel() model {
 	cfg := DefaultConfig()
 	m := model{
 		cfg:            &cfg,
 		styles:         newStyles(false),
-		keymap:         NewKeymap(),
 		width:          80,
 		height:         24,
 		ready:          true,
 		gwStatus:       "healthy",
 		healthText:     "Gateway is healthy",
 		lifecycleState: "idle",
+		currentScreen:  screenHome,
 	}
 	return m
 }
@@ -29,6 +28,7 @@ func newTestModel() model {
 // renders the "Gateway Status" heading.
 func TestRenderDashboard_ContainsGatewayStatus(t *testing.T) {
 	m := newTestModel()
+	m.currentScreen = screenDashboard
 	result := renderDashboard(m)
 	assert.Contains(t, result, "Gateway Status")
 }
@@ -37,6 +37,7 @@ func TestRenderDashboard_ContainsGatewayStatus(t *testing.T) {
 // the node ID in the rendered output.
 func TestRenderDashboard_ContainsNodeID(t *testing.T) {
 	m := newTestModel()
+	m.currentScreen = screenDashboard
 	m.nodeStatus = &services.NodeStatus{
 		NodeID:        "test-node-1",
 		Status:        "healthy",
@@ -53,6 +54,7 @@ func TestRenderDashboard_ContainsNodeID(t *testing.T) {
 // dashboard shows the "No status data" message.
 func TestRenderDashboard_NoStatusData(t *testing.T) {
 	m := newTestModel()
+	m.currentScreen = screenDashboard
 	m.nodeStatus = nil
 	result := renderDashboard(m)
 	assert.Contains(t, result, "No status data")
@@ -76,36 +78,67 @@ func TestRenderDashboard_StatusDotColor(t *testing.T) {
 	})
 }
 
-// TestRenderDashboard_QuickActionsCtrlS checks that the Quick Actions panel
-// includes the Ctrl+S shortcut.
-func TestRenderDashboard_QuickActionsCtrlS(t *testing.T) {
-	m := newTestModel()
-	result := renderDashboard(m)
-	assert.Contains(t, result, "Ctrl+S")
+// TestRenderDashboard_LifecyclePanelHidden checks that lifecycle panel is
+// hidden when idle or running.
+func TestRenderDashboard_LifecyclePanelHidden(t *testing.T) {
+	t.Run("idle hides lifecycle panel", func(t *testing.T) {
+		m := newTestModel()
+		m.lifecycleState = "idle"
+		result := renderLifecyclePanel(m)
+		assert.Empty(t, result)
+	})
+
+	t.Run("running hides lifecycle panel", func(t *testing.T) {
+		m := newTestModel()
+		m.lifecycleState = "running"
+		result := renderLifecyclePanel(m)
+		assert.Empty(t, result)
+	})
 }
 
-// TestHandleDashboardKeyMsg_CtrlS checks that pressing Ctrl+S on the
-// Dashboard tab transitions lifecycleState from "idle" to "starting".
-func TestHandleDashboardKeyMsg_CtrlS(t *testing.T) {
-	m := newTestModel()
-	m.lifecycleState = "idle"
+// TestDashboardActionsLifecycle checks dashboard action buttons.
+func TestDashboardActionsLifecycle(t *testing.T) {
+	t.Run("idle shows start", func(t *testing.T) {
+		m := newTestModel()
+		m.currentScreen = screenDashboard
+		m.lifecycleState = "idle"
+		result := renderDashboardActions(m)
+		assert.Contains(t, result, "[Start Gateway]")
+	})
 
-	// Create a KeyMsg that String() returns "ctrl+s"
-	keyMsg := tea.KeyPressMsg(tea.Key{Mod: tea.ModCtrl, Code: 's'})
-	result, _ := handleDashboardKeyMsg(m, keyMsg)
-	updated := result.(model)
-	assert.Equal(t, "starting", updated.lifecycleState)
+	t.Run("running shows stop and restart", func(t *testing.T) {
+		m := newTestModel()
+		m.currentScreen = screenDashboard
+		m.lifecycleState = "running"
+		result := renderDashboardActions(m)
+		assert.Contains(t, result, "[Stop Gateway]")
+		assert.Contains(t, result, "[Restart Gateway]")
+	})
 }
 
-// TestHandleDashboardKeyMsg_CtrlR checks that pressing Ctrl+R on the
-// Dashboard tab transitions lifecycleState from "idle" to "restarting".
-func TestHandleDashboardKeyMsg_CtrlR(t *testing.T) {
-	m := newTestModel()
-	m.lifecycleState = "idle"
+// TestContentItemCountDashboard checks content item counts for dashboard screen.
+func TestContentItemCountDashboard(t *testing.T) {
+	t.Run("idle has 1 item", func(t *testing.T) {
+		m := newTestModel()
+		m.currentScreen = screenDashboard
+		m.lifecycleState = "idle"
+		assert.Equal(t, 1, contentItemCount(m))
+	})
 
-	// Create a KeyMsg that String() returns "ctrl+r"
-	keyMsg := tea.KeyPressMsg(tea.Key{Mod: tea.ModCtrl, Code: 'r'})
-	result, _ := handleDashboardKeyMsg(m, keyMsg)
-	updated := result.(model)
-	assert.Equal(t, "restarting", updated.lifecycleState)
+	t.Run("running has 2 items", func(t *testing.T) {
+		m := newTestModel()
+		m.currentScreen = screenDashboard
+		m.lifecycleState = "running"
+		assert.Equal(t, 2, contentItemCount(m))
+	})
+}
+
+// TestHomeScreenRendering checks the home screen renders menu options.
+func TestHomeScreenRendering(t *testing.T) {
+	m := newTestModel()
+	result := renderHome(m)
+	assert.Contains(t, result, "Dashboard")
+	assert.Contains(t, result, "Providers")
+	assert.Contains(t, result, "Plugins")
+	assert.Contains(t, result, "wolink")
 }
