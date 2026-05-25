@@ -96,7 +96,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -106,6 +106,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 4. Testing & Validation | 4/4 | Complete | 2026-04-05 |
 | 5. Admin Auth Refactor | 4/4 | Complete | 2026-04-25 |
 | 6. Stateless Gateway | 3/3 | Complete | 2026-05-09 |
+| 7. OCR Support | 3/4 | In Progress | — |
+| 8. Passthrough/Parsed Mode | 0/0 | Not Started | — |
+| 9. TUI Gateway Manager | 0/0 | Not Started | — |
 
 ### Phase 5: wolink-core 网关核心化重构
 
@@ -153,3 +156,14 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 8 to break down)
+
+### Phase 9: TUI 网关管理器 - 独立的终端管理界面
+
+**Goal:** Build a standalone TUI (Terminal UI) process that manages the wolink gateway independently. The TUI runs as a separate process from the gateway — TUI exit does not affect the running gateway service. Users can start/restart/stop the gateway service, configure new providers and models, view node status, modify configuration, enable/disable plugins, and manage all gateway operations through an interactive terminal interface.
+
+**Depends on:** Phase 8
+**Requirements:** TUI-01, TUI-02, TUI-03, TUI-04, TUI-05
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 9 to break down)
