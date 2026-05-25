@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"charm.land/bubbletea/v2"
+	"charm.land/bubbles/v2/spinner"
 	"charm.land/lipgloss/v2"
 	"wolink-core/cmd/tui/gateway"
 	"wolink-core/internal/services"
@@ -76,24 +77,25 @@ const (
 
 // model is the top-level Bubble Tea model for the TUI application.
 type model struct {
-	cfg             *TUIConfig
-	gwClient        *gateway.Client
-	gwLifecycle     *gateway.Lifecycle
-	styles          styles
-	keymap          keymap
-	width           int
-	height          int
-	activeTab       activeTab
-	gwStatus        string  // "healthy", "degraded", "down", "unknown"
-	healthText      string  // human-readable health description
-	nodeStatus      *services.NodeStatus
-	statusErr       string
-	polling         bool
-	darkTheme       bool
-	ready           bool
-	lifecycleState  string // "idle", "starting", "stopping", "restarting"
-	lifecycleErr    string
-	lifecycleStep   string // current restart step text
+	cfg            *TUIConfig
+	gwClient       *gateway.Client
+	gwLifecycle    *gateway.Lifecycle
+	styles         styles
+	keymap         keymap
+	width          int
+	height         int
+	activeTab      activeTab
+	gwStatus       string // "healthy", "degraded", "down", "unknown"
+	healthText     string // human-readable health description
+	nodeStatus     *services.NodeStatus
+	statusErr      string
+	polling        bool
+	darkTheme      bool
+	ready          bool
+	lifecycleState string // "idle", "starting", "stopping", "restarting"
+	lifecycleErr   string
+	lifecycleStep  string // current restart step text
+	spinnerModel   spinner.Model
 }
 
 func newModel(cfg TUIConfig, client *gateway.Client, lifecycle *gateway.Lifecycle) model {
@@ -104,6 +106,7 @@ func newModel(cfg TUIConfig, client *gateway.Client, lifecycle *gateway.Lifecycl
 		keymap:         NewKeymap(),
 		gwStatus:       "unknown",
 		lifecycleState: "idle",
+		spinnerModel:   spinner.New(spinner.WithSpinner(spinner.Dot)),
 	}
 }
 
@@ -201,6 +204,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinnerModel, cmd = m.spinnerModel.Update(msg)
+		return m, cmd
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
@@ -242,10 +250,6 @@ func (m model) View() tea.View {
 	)
 	return tea.NewView(content)
 }
-
-// ---------------------------------------------------------------------------
-// Helper: newModel (re-exported for tests)
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Helper: renderTabBar
@@ -316,7 +320,7 @@ func renderStatusBar(m model) string {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: renderText — centered placeholder text for tabs not yet implemented
+// Helper: renderText -- centered placeholder text for tabs not yet implemented
 // ---------------------------------------------------------------------------
 
 func renderText(m model, text string) string {
@@ -328,7 +332,7 @@ func renderText(m model, text string) string {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: pollCmd — schedules the next polling tick
+// Helper: pollCmd -- schedules the next polling tick
 // ---------------------------------------------------------------------------
 
 func pollCmd(d time.Duration) tea.Cmd {
@@ -338,7 +342,7 @@ func pollCmd(d time.Duration) tea.Cmd {
 }
 
 // ---------------------------------------------------------------------------
-// Entry point: startTUI — creates and runs the Bubble Tea program
+// Entry point: startTUI -- creates and runs the Bubble Tea program
 // ---------------------------------------------------------------------------
 
 func startTUI(cfg TUIConfig) {
