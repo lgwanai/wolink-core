@@ -38,7 +38,13 @@
       "Bash(go vet:*)",
       "Bash(go doc:*)",
       "Bash(git push:*)",
-      "Skill(gsd-plan-phase)"
+      "Skill(gsd-plan-phase)",
+      "Bash(git symbolic-ref *)",
+      "Bash(export GOPROXY=https://goproxy.cn,direct)",
+      "Bash([ -f \"/Users/wuliang/workspace/wolink-core/.claude/worktrees/agent-a4139bf59ecc82a1c/$f\" ])",
+      "Bash(git ls-tree *)",
+      "Bash(git worktree *)",
+      "Bash(git branch *)"
     ]
   }
 }

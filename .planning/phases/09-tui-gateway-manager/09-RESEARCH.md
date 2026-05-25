@@ -562,22 +562,22 @@ func saveProviderFile(pf *models.ProviderFile, path string) error {
 | A3 | SysProcAttr{Setsid: true, Setpgid: true} detaches child from terminal on macOS (Darwin) and Linux | Architectural Patterns | Gateway dies on TUI exit on macOS. Mitigation: Setsid is supported on both Linux and macOS (Darwin) per syscall docs |
 | A4 | `Process.Release()` prevents zombie processes | Common Pitfalls | Gateway becomes zombie on early TUI crash. Mitigation: Process.Release is well-documented in Go stdlib |
 
-## Open Questions
+## Open Questions [RESOLVED]
 
-1. **Bubble Tea v2 exact version compatibility**
+1. **Bubble Tea v2 exact version compatibility** [RESOLVED]
    - What we know: v2.0.x is stable as of early 2026
    - What's unclear: The exact latest patch version (2.0.6 for bubbletea, 2.0.2 for lipgloss, 2.1.0 for bubbles per web search)
-   - Recommendation: Planner should run `go get charm.land/bubbletea/v2@latest` to resolve exact version at build time
+   - Resolution: Run `go get charm.land/bubbletea/v2@latest` at build time (Plan 01, Task 0). Exact version resolved at install time; import paths are stable regardless of patch version.
 
-2. **Tab bar rendering approach**
+2. **Tab bar rendering approach** [RESOLVED]
    - What we know: Bubbles does not provide a built-in tab bar component
    - What's unclear: Whether to build tabs with lipgloss inline styling, use a third-party component like `stickers` (flexbox layouts), or reuse the `list` component styled as tabs
-   - Recommendation: Build tab bar with lipgloss -- a row of styled lipgloss blocks with active/inactive colors. Third-party dependencies add risk. The Charm team's own "file-manager" example uses this approach.
+   - Resolution: Build tab bar with lipgloss inline (row of styled blocks with active/inactive colors). No third-party dependencies. This matches the Charm team's own example patterns. See Plan 02, model.go helper functions.
 
-3. **Config file change detection for running gateway**
+3. **Config file change detection for running gateway** [RESOLVED]
    - What we know: Gateway reads config files at startup and watches for changes via fsnotify (implied by PluginService watching plugin source files)
    - What's unclear: Whether the gateway detects config file changes at runtime or requires restart. The decision says "warn if gateway is running" so the planner should assume restart is required.
-   - Recommendation: Design TUI to show a "restart required" indicator after config changes while gateway is running. No polling for file changes in TUI -- too complex and out of scope.
+   - Resolution: TUI shows "restart required" indicator after config changes while gateway is running (per D-11). No file change polling in TUI -- too complex and out of scope. Gateway restart handled via Ctrl+R on Dashboard tab.
 
 ## Environment Availability
 
@@ -636,6 +636,8 @@ func TestDashboardUpdate(t *testing.T) {
 | TUI-02 | Save produces valid YAML | unit | `go test ./cmd/tui/forms/... -run TestYAMLSave` | No -- new |
 | TUI-03 | Health polling cmd returns correct type | unit | `go test ./cmd/tui/... -run TestHealthPollCmd` | No -- new |
 | TUI-03 | Status message updates model | unit | `go test ./cmd/tui/... -run TestStatusUpdate` | No -- new |
+| TUI-03 | Ctrl+S starts gateway (lifecycle) | unit | `go test ./cmd/tui/... -run TestLifecycleStart` | No -- new |
+| TUI-03 | Ctrl+R triggers restart with progress | unit | `go test ./cmd/tui/... -run TestLifecycleRestartProgress` | No -- new |
 | TUI-04 | Plugin reload calls correct endpoint | unit | `go test ./cmd/tui/... -run TestPluginReload` | No -- new |
 | TUI-04 | Plugin unload calls correct endpoint | unit | `go test ./cmd/tui/... -run TestPluginUnload` | No -- new |
 | TUI-05 | Process starts with Setsid+Setpgid | unit | `go test ./cmd/tui/gateway/... -run TestStartWithGroup` | No -- new |

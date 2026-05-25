@@ -163,7 +163,10 @@ Plans:
 
 **Depends on:** Phase 8
 **Requirements:** TUI-01, TUI-02, TUI-03, TUI-04, TUI-05
-**Plans:** 0 plans
+**Plans:** 4 plans in 4 waves
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 9 to break down)
+- [x] 09-01: Foundation — Install Charm v2 deps, gateway HTTP client, process lifecycle (os/exec), styles, keymaps — Wave 1
+- [ ] 09-02: Dashboard — Main Bubble Tea model, health polling, status panels, tab bar navigation — Wave 2
+- [ ] 09-03: Providers — Form validation, provider wizard, model form, provider list with add/edit/delete — Wave 3
+- [ ] 09-04: Plugins + Tests — Plugin list with reload/unload, unit tests for all components — Wave 4
