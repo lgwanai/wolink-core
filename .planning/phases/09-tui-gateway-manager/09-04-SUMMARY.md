@@ -122,7 +122,7 @@ completed: 2026-05-25
 
 ## Issues Encountered
 
-- Pre-existing test failures in dashboard_test.go (TestHandleDashboardKeyMsg_CtrlS, TestHandleDashboardKeyMsg_CtrlR) - these test unimplemented dashboard key handlers and predate this plan
+- 6 pre-existing test failures in dashboard_test.go (TestRenderDashboard_*, TestHandleDashboardKeyMsg_*) - these test unimplemented dashboard.go stubs and predate this plan. renderDashboard is a stub returning "Dashboard - Coming soon". handleDashboardKeyMsg is a no-op stub. These will pass once dashboard.go implements the full dashboard.
 - Go template syntax `{{.foo}}` is not valid YAML (yaml.v3 treats it as an invalid map key)
 - HTTP timeout errors use "context deadline exceeded" not "timeout" in Go's net/http client
 - API response with JSON error body is returned as APIError struct, not raw "unexpected status" text
