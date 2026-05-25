@@ -105,6 +105,12 @@ type model struct {
 	selectedProviderIdx int
 	selectedModelIdx    int
 	restartRequired     bool
+
+	// Plugins tab state
+	pluginsState      pluginsTabState
+	pluginListItems   []pluginListItem
+	selectedPluginIdx int
+	pluginErr         string
 }
 
 func newModel(cfg TUIConfig, client *gateway.Client, lifecycle *gateway.Lifecycle) model {
@@ -115,6 +121,7 @@ func newModel(cfg TUIConfig, client *gateway.Client, lifecycle *gateway.Lifecycl
 		keymap:         NewKeymap(),
 		gwStatus:       "unknown",
 		lifecycleState: "idle",
+		pluginsState:   pluginsStateIdle,
 	}
 }
 
@@ -212,19 +219,60 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case pluginsUpdateMsg:
+		if msg.err != nil {
+			m.pluginErr = msg.err.Error()
+			m.pluginsState = pluginsStateError
+		} else {
+			m.pluginListItems = make([]pluginListItem, len(msg.plugins))
+			for i, p := range msg.plugins {
+				m.pluginListItems[i] = pluginListItem{info: p}
+			}
+			m.pluginsState = pluginsStateList
+			m.pluginErr = ""
+		}
+		return m, nil
+
+	case pluginsReloadMsg:
+		if msg.err != nil {
+			m.pluginErr = msg.err.Error()
+			m.pluginsState = pluginsStateError
+		} else {
+			m.pluginErr = ""
+			m.pluginsState = pluginsStateLoading
+			return m, refreshPluginsCmd(m.gwClient)
+		}
+		return m, nil
+
+	case pluginsUnloadMsg:
+		if msg.err != nil {
+			m.pluginErr = msg.err.Error()
+			m.pluginsState = pluginsStateError
+		} else {
+			m.pluginErr = ""
+			m.pluginsState = pluginsStateLoading
+			return m, refreshPluginsCmd(m.gwClient)
+		}
+		return m, nil
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "tab", "l":
 			m.activeTab = (m.activeTab + 1) % 3
+			var cmds []tea.Cmd
 			if m.activeTab == tabProviders {
 				m.providersState = pList
 				providers, singles, _ := listProviderFiles(m.cfg.ModelsDir)
 				m.providerListItems = providers
 				m.singleModelItems = singles
 			}
-			return m, nil
+			if m.activeTab == tabPlugins && m.pluginsState == pluginsStateIdle {
+				m.pluginsState = pluginsStateLoading
+				cmds = append(cmds, refreshPluginsCmd(m.gwClient))
+			}
+			return m, tea.Batch(cmds...)
 		case "shift+tab", "h":
 			// When inside a form on the providers tab, let the providers handler
 			// manage shift+tab for form navigation instead of switching tabs.
@@ -232,13 +280,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return handleProvidersKeyMsg(m, msg)
 			}
 			m.activeTab = (m.activeTab - 1 + 3) % 3
+			var cmds []tea.Cmd
 			if m.activeTab == tabProviders {
 				m.providersState = pList
 				providers, singles, _ := listProviderFiles(m.cfg.ModelsDir)
 				m.providerListItems = providers
 				m.singleModelItems = singles
 			}
-			return m, nil
+			if m.activeTab == tabPlugins && m.pluginsState == pluginsStateIdle {
+				m.pluginsState = pluginsStateLoading
+				cmds = append(cmds, refreshPluginsCmd(m.gwClient))
+			}
+			return m, tea.Batch(cmds...)
 		default:
 			// Delegate to active tab's key handler
 			switch m.activeTab {
@@ -247,7 +300,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case tabProviders:
 				return handleProvidersKeyMsg(m, msg)
 			case tabPlugins:
-				return m, nil
+				return handlePluginsKeyMsg(m, msg)
 			}
 		}
 	}
@@ -314,7 +367,7 @@ func renderContent(m model) string {
 	case tabProviders:
 		return renderProvidersContent(m)
 	case tabPlugins:
-		return renderText(m, "Plugins - Coming soon")
+		return renderPluginsContent(m)
 	default:
 		return ""
 	}
