@@ -7,6 +7,7 @@ import (
 
 	"charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"wolink-core/cmd/tui/forms"
 	"wolink-core/cmd/tui/gateway"
 	"wolink-core/internal/services"
 )
@@ -94,6 +95,16 @@ type model struct {
 	lifecycleState  string // "idle", "starting", "stopping", "restarting"
 	lifecycleErr    string
 	lifecycleStep   string // current restart step text
+
+	// Providers tab state
+	providersState      providersTabState
+	providerListItems   []providerListItem
+	singleModelItems    []singleModelItem
+	providerForm        forms.ProviderFormModel
+	modelForm           forms.ModelFormModel
+	selectedProviderIdx int
+	selectedModelIdx    int
+	restartRequired     bool
 }
 
 func newModel(cfg TUIConfig, client *gateway.Client, lifecycle *gateway.Lifecycle) model {
@@ -207,16 +218,35 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "tab", "l":
 			m.activeTab = (m.activeTab + 1) % 3
+			if m.activeTab == tabProviders {
+				m.providersState = pList
+				providers, singles, _ := listProviderFiles(m.cfg.ModelsDir)
+				m.providerListItems = providers
+				m.singleModelItems = singles
+			}
 			return m, nil
 		case "shift+tab", "h":
+			// When inside a form on the providers tab, let the providers handler
+			// manage shift+tab for form navigation instead of switching tabs.
+			if m.activeTab == tabProviders && m.providersState != pList {
+				return handleProvidersKeyMsg(m, msg)
+			}
 			m.activeTab = (m.activeTab - 1 + 3) % 3
+			if m.activeTab == tabProviders {
+				m.providersState = pList
+				providers, singles, _ := listProviderFiles(m.cfg.ModelsDir)
+				m.providerListItems = providers
+				m.singleModelItems = singles
+			}
 			return m, nil
 		default:
 			// Delegate to active tab's key handler
 			switch m.activeTab {
 			case tabDashboard:
 				return handleDashboardKeyMsg(m, msg)
-			case tabProviders, tabPlugins:
+			case tabProviders:
+				return handleProvidersKeyMsg(m, msg)
+			case tabPlugins:
 				return m, nil
 			}
 		}
@@ -282,7 +312,7 @@ func renderContent(m model) string {
 	case tabDashboard:
 		return renderDashboard(m)
 	case tabProviders:
-		return renderText(m, "Providers - Coming soon")
+		return renderProvidersContent(m)
 	case tabPlugins:
 		return renderText(m, "Plugins - Coming soon")
 	default:
