@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	charm.land/bubbles/v2 v2.1.0
+	charm.land/bubbletea/v2 v2.0.6
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/IBM/sarama v1.43.0
 	github.com/alicebob/miniredis/v2 v2.37.0
@@ -23,7 +24,6 @@ require (
 )
 
 require (
-	charm.land/bubbletea/v2 v2.0.6 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect

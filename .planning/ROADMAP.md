@@ -167,6 +167,6 @@ Plans:
 
 Plans:
 - [x] 09-01: Foundation — Install Charm v2 deps, gateway HTTP client, process lifecycle (os/exec), styles, keymaps — Wave 1
-- [ ] 09-02: Dashboard — Main Bubble Tea model, health polling, status panels, tab bar navigation — Wave 2
+- [x] 09-02: Dashboard — Main Bubble Tea model, health polling, status panels, tab bar navigation — Wave 2
 - [ ] 09-03: Providers — Form validation, provider wizard, model form, provider list with add/edit/delete — Wave 3
 - [ ] 09-04: Plugins + Tests — Plugin list with reload/unload, unit tests for all components — Wave 4

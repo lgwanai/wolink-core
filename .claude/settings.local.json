@@ -44,7 +44,9 @@
       "Bash([ -f \"/Users/wuliang/workspace/wolink-core/.claude/worktrees/agent-a4139bf59ecc82a1c/$f\" ])",
       "Bash(git ls-tree *)",
       "Bash(git worktree *)",
-      "Bash(git branch *)"
+      "Bash(git branch *)",
+      "Bash(git stash *)",
+      "Bash(git -C /Users/wuliang/workspace/wolink-core rev-parse HEAD)"
     ]
   }
 }
