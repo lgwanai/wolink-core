@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -35,31 +34,8 @@ func main() {
 		cfg.WorkingDir = wd
 	}
 
-	// Diagnostic banner
-	fmt.Println(strings.Repeat("=", 60))
-	fmt.Println("  Wolink Gateway Manager — TUI")
-	fmt.Println(strings.Repeat("=", 60))
-	fmt.Printf("  Gateway URL:       %s\n", cfg.GatewayURL)
-	if cfg.AdminToken != "" {
-		fmt.Printf("  Admin Token:       %s (%d chars)\n", strings.Repeat("*", 8), len(cfg.AdminToken))
-	} else {
-		fmt.Println("  Admin Token:       (not set — some features will be unavailable)")
-	}
-	if cfg.GatewayBinary != "" {
-		fmt.Printf("  Gateway Binary:    %s\n", cfg.GatewayBinary)
-	} else {
-		fmt.Println("  Gateway Binary:    (not set — will build from source)")
-	}
-	fmt.Printf("  Poll Interval:     %s\n", cfg.PollInterval)
-	fmt.Printf("  Working Directory: %s\n", cfg.WorkingDir)
-	fmt.Println(strings.Repeat("=", 60))
-	fmt.Println()
-	fmt.Println("  TUI configuration loaded successfully.")
-	fmt.Println("  The interactive TUI launches once Plan 02 is implemented.")
-	fmt.Println()
-	fmt.Println("  Usage: go run ./cmd/tui/ --gateway-url http://localhost:8080 --admin-token YOUR_TOKEN")
-	fmt.Println()
-	os.Exit(0)
+	// Start the Bubble Tea TUI
+	startTUI(cfg)
 }
 
 func init() {
