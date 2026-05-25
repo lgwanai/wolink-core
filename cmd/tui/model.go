@@ -292,6 +292,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, refreshPluginsCmd(m.gwClient))
 			}
 			return m, tea.Batch(cmds...)
+		case "1":
+			m.activeTab = tabDashboard
+			return m, nil
+		case "2":
+			m.activeTab = tabProviders
+			if m.providersState == pList {
+				providers, singles, _ := listProviderFiles(m.cfg.ModelsDir)
+				m.providerListItems = providers
+				m.singleModelItems = singles
+			}
+			return m, nil
+		case "3":
+			m.activeTab = tabPlugins
+			var cmds3 []tea.Cmd
+			if m.pluginsState == pluginsStateIdle {
+				m.pluginsState = pluginsStateLoading
+				cmds3 = append(cmds3, refreshPluginsCmd(m.gwClient))
+			}
+			return m, tea.Batch(cmds3...)
 		default:
 			// Delegate to active tab's key handler
 			switch m.activeTab {
