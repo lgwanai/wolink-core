@@ -7,6 +7,7 @@ Transform wolink-core AI Gateway from early development to production-ready stat
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
@@ -21,17 +22,21 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Security Foundation
+
 **Goal**: Application fails fast on invalid configuration and enforces security requirements at startup
 **Depends on**: Nothing (first phase)
 **Requirements**: SEC-01, SEC-02, SEC-03, SEC-04
 **Success Criteria** (what must be TRUE):
+
   1. Application exits immediately with clear error when required configuration is missing or invalid
   2. JWT secret shorter than 32 characters causes startup failure in production mode
   3. CORS rejects requests from origins not in the configured allowlist
   4. All user inputs pass through structured validation before processing
+
 **Plans**: 5 plans in 4 waves (Wave 0 + Waves 1-3)
 
 Plans:
+
 - [x] 01-00: Wave 0 - Test infrastructure setup (testify + test file scaffolds)
 - [x] 01-01: Configuration validation and fail-fast (SEC-01, SEC-02) - Wave 1
 - [x] 01-02: CORS configuration hardening (SEC-03) - Wave 1
@@ -39,18 +44,22 @@ Plans:
 - [x] 01-04: Authentication request validation (SEC-04) - Wave 3
 
 ### Phase 2: Infrastructure Hardening
+
 **Goal**: Server handles production traffic with proper resource management and health visibility
 **Depends on**: Phase 1
 **Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05, INFRA-06
 **Success Criteria** (what must be TRUE):
+
   1. Server completes in-flight requests before shutting down when receiving SIGTERM
   2. `/health` endpoint returns 200 OK when server is running
   3. `/ready` endpoint returns 200 OK only when database and Redis are connected, 503 otherwise
   4. Database and Redis connections are pooled with configurable limits
   5. HTTP server enforces read/write/idle timeouts to prevent resource exhaustion
+
 **Plans**: 5 plans in 2 waves
 
 Plans:
+
 - [x] 02-01: Infrastructure configuration structs (INFRA-01, INFRA-04, INFRA-05, INFRA-06) - Wave 1
 - [x] 02-02: Health and readiness endpoints (INFRA-02, INFRA-03) - Wave 1
 - [x] 02-03: Database connection pooling (INFRA-04) - Wave 2
@@ -58,17 +67,21 @@ Plans:
 - [x] 02-05: HTTP server timeouts and shutdown (INFRA-01, INFRA-06) - Wave 2
 
 ### Phase 3: Observability
+
 **Goal**: All requests are traceable and system behavior is measurable through logs and metrics
 **Depends on**: Phase 2
 **Requirements**: OBS-01, OBS-02, OBS-03, OBS-04
 **Success Criteria** (what must be TRUE):
+
   1. Every request has a unique ID visible in logs and response headers
   2. Log entries are structured JSON containing request ID, timestamp, and contextual fields
   3. `/metrics` endpoint exposes request rate, latency, and error counters in Prometheus format
   4. All API errors return consistent HTTP status codes matching error type
+
 **Plans**: 6 plans in 3 waves (Wave 0 + Waves 1-2)
 
 Plans:
+
 - [x] 03-00: Wave 0 - Install dependencies and test scaffolds - Wave 0
 - [x] 03-01: Request ID middleware (OBS-01) - Wave 1
 - [x] 03-02: Structured JSON logging (OBS-02) - Wave 1
@@ -77,17 +90,21 @@ Plans:
 - [x] 03-05: Integration and middleware chain - Wave 2
 
 ### Phase 4: Testing & Validation
+
 **Goal**: All critical paths have automated tests providing confidence for production deployment
 **Depends on**: Phase 3
 **Requirements**: TEST-01, TEST-02, TEST-03, TEST-04
 **Success Criteria** (what must be TRUE):
+
   1. All services have unit tests with minimum 80% code coverage
   2. All API endpoints have integration tests verifying request/response behavior
   3. Critical paths (chat completion, streaming) have performance benchmarks
   4. Graceful shutdown is verified through automated tests
+
 **Plans**: 4 plans in 2 waves
 
 Plans:
+
 - [x] 04-01: Unit tests for services (TEST-01) - Wave 1
 - [x] 04-02: Integration tests for handlers and plugins (TEST-02) - Wave 1
 - [x] 04-03: Performance benchmarks (TEST-03) - Wave 2
@@ -108,7 +125,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 6. Stateless Gateway | 3/3 | Complete | 2026-05-09 |
 | 7. OCR Support | 3/4 | In Progress | — |
 | 8. Passthrough/Parsed Mode | 0/0 | Not Started | — |
-| 9. TUI Gateway Manager | 0/0 | Not Started | — |
+| 9. TUI Gateway Manager | 4/4 | Complete    | 2026-05-25 |
 
 ### Phase 5: wolink-core 网关核心化重构
 
@@ -118,6 +135,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 **Plans:** 4 plans in 4 waves
 
 Plans:
+
 - [x] 05-01: Configuration and Models - Add AdminConfig, remove Department/AdminUser/AdminSession models
 - [x] 05-02: Services Layer - Create NodeService, delete AdminAuthService, update AuthService
 - [x] 05-03: Handlers and Routes - Create AdminTokenAuth middleware, NodeHandler, update routes
@@ -131,6 +149,7 @@ Plans:
 **Plans:** 3 plans in 3 waves
 
 Plans:
+
 - [x] 06-01: Remove database-dependent models, services, and handlers — Wave 1
 - [x] 06-02: Config-driven auth (APIKeyValidator + AdminSyncService) — Wave 2
 - [x] 06-03: Wire stateless gateway, finalize entry point, update config — Wave 3
@@ -143,6 +162,7 @@ Plans:
 **Plans:** 4 plans in 3 waves
 
 Plans:
+
 - [ ] 07-01: Create OCR model configuration files for GLM-OCR and PaddleOCR - Wave 1
 - [ ] 07-02: Add OCRPlugin interface and OpenAI plugin implementation - Wave 1
 - [ ] 07-03: Add OCR handler, route, and service method - Wave 2
@@ -155,6 +175,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd:plan-phase 8 to break down)
 
 ### Phase 9: TUI 网关管理器 - 独立的终端管理界面
@@ -163,9 +184,10 @@ Plans:
 
 **Depends on:** Phase 8
 **Requirements:** TUI-01, TUI-02, TUI-03, TUI-04, TUI-05
-**Plans:** 4 plans in 4 waves
+**Plans:** 4/4 plans complete
 
 Plans:
+
 - [x] 09-01: Foundation — Install Charm v2 deps, gateway HTTP client, process lifecycle (os/exec), styles, keymaps — Wave 1
 - [x] 09-02: Dashboard — Main Bubble Tea model, health polling, status panels, tab bar navigation — Wave 2
 - [x] 09-03: Providers — Form validation, provider wizard, model form, provider list with add/edit/delete — Wave 3

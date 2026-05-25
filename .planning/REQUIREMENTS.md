@@ -99,6 +99,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GW-06 | Phase 6 | Complete |
 
 **Coverage:**
+
 - v1 requirements: 21 total
 - Mapped to phases: 21
 - Unmapped: 0
