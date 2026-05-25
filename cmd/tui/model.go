@@ -163,7 +163,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case healthMsg:
 		if msg.err != nil {
 			m.gwStatus = "down"
-			m.healthText = msg.err.Error()
+			m.healthText = "Gateway not reachable"
 		} else if msg.ok {
 			m.gwStatus = "healthy"
 			if msg.statusText != "" {
@@ -179,7 +179,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case statusUpdateMsg:
 		if msg.err != nil {
-			m.statusErr = msg.err.Error()
+			m.nodeStatus = nil; m.statusErr = ""
 		} else {
 			m.nodeStatus = msg.status
 			m.statusErr = ""
